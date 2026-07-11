@@ -4,6 +4,8 @@ import { useRoute } from "vue-router";
 import { storeToRefs } from "pinia";
 import { useSubmitStore } from "../stores/submit.js";
 import SlotGrid from "../components/SlotGrid.vue";
+import TemplatePicker from "../components/TemplatePicker.vue";
+import type { TemplateDef } from "@direct-collage/shared";
 
 const route = useRoute();
 const store = useSubmitStore();
@@ -18,6 +20,24 @@ const fileInput = ref<HTMLInputElement | null>(null);
 const wallSlug = computed(() => route.params.wallSlug as string);
 
 onMounted(() => store.loadWall(wallSlug.value));
+
+/** User picked a template from the picker → store flips to edit phase. */
+function onSelectTemplate(t: TemplateDef) {
+  store.selectTemplate(t);
+}
+
+/**
+ * Return to the template picker. If the user has already placed any photos,
+ * confirm first — switching layouts clears all slots (different layouts have
+ * different slot counts, so a Triad's 3 photos can't map onto a Solo's 1).
+ */
+function onChangeTemplate() {
+  const hasPhotos = store.sources.some((s) => s !== null);
+  if (hasPhotos && !window.confirm("Switching layout will clear your photos. Continue?")) {
+    return;
+  }
+  store.changeTemplate();
+}
 
 function pickFile(slotIndex: number) {
   preparing.value = slotIndex;
@@ -81,12 +101,20 @@ const busy = computed(() => preparing.value !== null || phase.value === "submitt
     <!-- Header -->
     <header class="mb-3 flex items-center justify-between">
       <h1 class="text-lg font-semibold">{{ wall?.name ?? "DirectCollage" }}</h1>
-      <span
-        v-if="template"
-        class="rounded-full bg-neutral-800 px-2 py-0.5 text-xs text-neutral-300"
+      <!--
+        The template badge is a button so the user can switch layouts. Only
+        shown in the edit/submitting phases (not during pick). Confirming the
+        switch clears any photos already arranged, since slot counts differ.
+      -->
+      <button
+        v-if="template && (phase === 'edit' || phase === 'submitting')"
+        type="button"
+        class="flex items-center gap-1 rounded-full bg-neutral-800 px-3 py-1 text-xs text-neutral-300 hover:bg-neutral-700"
+        @click="onChangeTemplate"
       >
         {{ template.label }}
-      </span>
+        <span class="text-neutral-500">▾</span>
+      </button>
     </header>
 
     <!-- Loading -->
@@ -121,7 +149,15 @@ const busy = computed(() => preparing.value !== null || phase.value === "submitt
       </button>
     </div>
 
-    <!-- Edit / Pick / Submitting all render the grid -->
+    <!-- Pick phase: choose a template layout -->
+    <div v-else-if="phase === 'pick'" class="flex-1 overflow-y-auto py-4">
+      <TemplatePicker
+        :templates="store.enabledTemplates"
+        @select="onSelectTemplate"
+      />
+    </div>
+
+    <!-- Edit / Submitting render the grid -->
     <template v-else>
       <div v-if="prepareError" class="mb-2 rounded bg-rose-900/40 px-3 py-2 text-sm text-rose-200">
         {{ prepareError }}

@@ -1,13 +1,15 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
-import type { TemplateSlot } from "@direct-collage/shared";
-import type { PreparedImage } from "../lib/image.js";
+import type { AspectRatio, TemplateSlot } from "@direct-collage/shared";
+import { OUTPUT_DIMS, type PreparedImage } from "../lib/image.js";
 import { drawSlot, type SlotTransform } from "../lib/baker.js";
 
 const props = defineProps<{
   slot: TemplateSlot;
   source: PreparedImage | null;
   transform: SlotTransform;
+  /** Wall's aspect ratio — used to size the slot output dims correctly. */
+  ratio: AspectRatio;
   active: boolean;
 }>();
 
@@ -24,20 +26,34 @@ const imgEl = ref<HTMLImageElement | null>(null);
 /**
  * Max zoom scale (cover-relative), per PRD §6.1.4.
  *
- * Worked example (source 2160×2160, Solo slot 1080×1080):
- *   absMax     = min(srcW/slotW, srcH/slotH) * 1.2 = min(2,2)*1.2 = 2.4
- *   coverScale = max(slotW/srcW, slotH/srcH)       = 0.5  (image shrunk to cover)
- *   maxS       = absMax / coverScale                = 2.4 / 0.5 = 4.8
+ * The PRD formula is in ABSOLUTE terms (slot px per source px):
+ *   absMax = min(srcW/slotW, srcH/slotH) * 1.2
+ * At that limit, the source image is drawn at a scale where each output pixel
+ * maps to ~1/1.2 of a source pixel — i.e. the source covers up to 1.2× the
+ * slot, which is the anti-pixelation ceiling (going further would upscale
+ * source pixels and visibly pixelate).
  *
- * So the slider ranges from cover-fit (1.0, whole image visible) up to 4.8×
- * (zoomed to ~20% of the source — 1.2× past native 1:1 pixel mapping). The
- * `* 1.2` is the PRD's oversample headroom; below absMax=coverScale the
- * source is already pixelating at cover, so we floor accordingly.
+ * transform.scale is COVER-RELATIVE (1.0 = image just covers the slot).
+ * drawSlot computes drawScale = coverScale * transform.scale. To cap drawScale
+ * at absMax, solve: transform.scale_max = absMax / coverScale.
+ *
+ * Worked example (2160×2160 source, Solo 1080×1080 slot):
+ *   absMax     = min(2,2)*1.2 = 2.4   (source can be up to 2.4× the slot)
+ *   coverScale = 0.5                 (image shrunk 2× to just cover)
+ *   maxScale   = 2.4 / 0.5 = 4.8     (zoom from "whole photo" to ~21% of it)
+ *
+ * At maxScale, drawScale = 0.5 × 4.8 = 2.4, so the source is drawn at
+ * 2160 × 2.4 = 5184px into the 1080 slot — that's DOWNSAMPLING (no
+ * pixelation). The source region shown = 1080/5184 = ~21% of the photo.
+ *
+ * slotOut dims derive from the wall's aspect ratio (not a hardcoded 1080²)
+ * so 4:5/9:16 walls clamp correctly.
  */
 const maxScale = computed(() => {
   if (!props.source) return 1;
-  const slotOutW = props.slot.w * 1080;
-  const slotOutH = props.slot.h * 1080;
+  const { w: outW, h: outH } = OUTPUT_DIMS[props.ratio];
+  const slotOutW = props.slot.w * outW;
+  const slotOutH = props.slot.h * outH;
   const absMax = Math.min(props.source.width / slotOutW, props.source.height / slotOutH) * 1.2;
   const coverScale = Math.max(slotOutW / props.source.width, slotOutH / props.source.height);
   return Math.max(1.05, absMax / coverScale);
@@ -154,13 +170,17 @@ function clampScale(s: number) {
  */
 const PAN_FRICTION = 0.85;
 
+function slotOutDims() {
+  const { w: outW, h: outH } = OUTPUT_DIMS[props.ratio];
+  return { slotOutW: props.slot.w * outW, slotOutH: props.slot.h * outH };
+}
+
 function cssToSourceDelta(dxCss: number, dyCss: number) {
   const canvas = canvasRef.value;
   if (!canvas || !props.source) return { x: 0, y: 0 };
   const rect = canvas.getBoundingClientRect();
   if (rect.width === 0 || rect.height === 0) return { x: 0, y: 0 };
-  const slotOutW = props.slot.w * 1080;
-  const slotOutH = props.slot.h * 1080;
+  const { slotOutW, slotOutH } = slotOutDims();
   // drawScale in drawSlot = coverScale * transform.scale, where coverScale is
   // how much the source is shrunk to just cover the slot (output/source).
   const coverScale = Math.max(
@@ -171,6 +191,36 @@ function cssToSourceDelta(dxCss: number, dyCss: number) {
   const sx = (slotOutW / rect.width / drawScale) * PAN_FRICTION;
   const sy = (slotOutH / rect.height / drawScale) * PAN_FRICTION;
   return { x: dxCss * sx, y: dyCss * sy };
+}
+
+/**
+ * Clamp pan offset so the image always fully COVERS the slot — no black edges.
+ *
+ * The image is drawn at drawW = srcW * drawScale into a slot of slotOutW.
+ * Overflow on each side = (drawW - slotOutW) / 2. drawSlot applies offset as
+ * `offset * drawScale`, so the max source-pixel offset is overflow / drawScale.
+ *
+ * At cover-fit (scale=1) on the constraining axis, drawW == slotOutW, so
+ * maxOffset = 0 (can't pan — image exactly fills, correct). The OTHER axis
+ * (where the source has extra pixels) allows panning within its overflow.
+ */
+function clampOffset(t: SlotTransform): SlotTransform {
+  if (!props.source) return t;
+  const { slotOutW, slotOutH } = slotOutDims();
+  const coverScale = Math.max(
+    slotOutW / props.source.width,
+    slotOutH / props.source.height,
+  );
+  const drawScale = coverScale * t.scale;
+  const drawW = props.source.width * drawScale;
+  const drawH = props.source.height * drawScale;
+  const maxX = drawW > slotOutW ? (drawW - slotOutW) / (2 * drawScale) : 0;
+  const maxY = drawH > slotOutH ? (drawH - slotOutH) / (2 * drawScale) : 0;
+  return {
+    ...t,
+    offsetX: Math.max(-maxX, Math.min(maxX, t.offsetX)),
+    offsetY: Math.max(-maxY, Math.min(maxY, t.offsetY)),
+  };
 }
 
 function onPointerDown(e: PointerEvent) {
@@ -197,23 +247,27 @@ function onPointerMove(e: PointerEvent) {
       // Scale factor = ratio of finger-distance change.
       const factor = dist / lastPinchDist;
       const newScale = clampScale(props.transform.scale * factor);
-      // Translate the slider-equivalent: emit the new scale.
-      emit("change", props.slot.index, { ...props.transform, scale: newScale });
+      // Re-clamp offset: zooming out shrinks the pan range, so an offset that
+      // was valid at higher zoom might now expose an edge.
+      const clamped = clampOffset({ ...props.transform, scale: newScale });
+      emit("change", props.slot.index, clamped);
     }
     lastPinchDist = dist;
     return;
   }
 
-  // One finger → pan (same as before).
+  // One finger → pan.
   const dx = e.clientX - lastPos.value.x;
   const dy = e.clientY - lastPos.value.y;
   lastPos.value = { x: e.clientX, y: e.clientY };
   const src = cssToSourceDelta(dx, dy);
-  emit("change", props.slot.index, {
+  // Clamp so the image always covers the slot (no black edges).
+  const clamped = clampOffset({
     ...props.transform,
     offsetX: props.transform.offsetX + src.x,
     offsetY: props.transform.offsetY + src.y,
   });
+  emit("change", props.slot.index, clamped);
 }
 
 function onPointerUp(e: PointerEvent) {
@@ -230,10 +284,8 @@ function onZoom(e: Event) {
   const target = e.target as HTMLInputElement;
   const pct = Number(target.value) / 100;
   const scale = 1 + pct * (maxScale.value - 1);
-  emit("change", props.slot.index, {
-    ...props.transform,
-    scale,
-  });
+  // Re-clamp offset on zoom-out so the image still covers the slot.
+  emit("change", props.slot.index, clampOffset({ ...props.transform, scale }));
 }
 
 function onPick() {

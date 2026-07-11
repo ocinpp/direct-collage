@@ -145,10 +145,19 @@ export function getTemplate(variant: TemplateVariant): TemplateDef {
 /**
  * The variants exposed in the submission picker.
  *
- * For Phase 1 (vertical slice) only Solo is enabled. Phase 2 flips the rest on.
- * Keeping this as a single export so the gate is in one place.
+ * Phase 2: all 7 variants enabled. Solo, Triad (3 layouts), Quad, Pentagon
+ * (2 layouts). Kept as a single export so the gate is in one place — flip
+ * entries off here to hide them from the picker and reject server-side.
  */
-export const ENABLED_TEMPLATES: TemplateVariant[] = ["solo"];
+export const ENABLED_TEMPLATES: TemplateVariant[] = [
+  "solo",
+  "triad-topbig",
+  "triad-row",
+  "triad-columns",
+  "quad",
+  "pentagon-topbig",
+  "pentagon-row",
+];
 
 /** Templates currently selectable in the submission portal. */
 export function getEnabledTemplates(): TemplateDef[] {

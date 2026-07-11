@@ -64,6 +64,7 @@ function slotStyle(s: { x: number; y: number; w: number; h: number }) {
         :slot="s"
         :source="sources[i] ?? null"
         :transform="transforms[i]!"
+        :ratio="ratio"
         :active="i === activeSlot"
         @pick="(idx) => emit('pick', idx)"
         @change="(idx, t) => emit('change', idx, t)"

@@ -69,6 +69,25 @@ export const useSubmitStore = defineStore("submit", () => {
     phase.value = "edit";
   }
 
+  /**
+   * Return to the template picker, clearing the current template + any placed
+   * photos (slot counts differ across layouts, so they can't be carried over).
+   * Revokes held object URLs to avoid leaks.
+   */
+  function changeTemplate() {
+    for (const s of sources.value) if (s) URL.revokeObjectURL(s.url);
+    template.value = null;
+    sources.value = [];
+    transforms.value = [];
+    activeSlot.value = 0;
+    // Clear any leftover submit state so the new flow starts clean.
+    submitStarted = false;
+    isSubmitting.value = false;
+    submitError.value = null;
+    uploadPct.value = 0;
+    phase.value = "pick";
+  }
+
   function firstEmptySlot(): number {
     const arr = sources.value;
     for (let i = 0; i < arr.length; i++) if (!arr[i]) return i;
@@ -207,6 +226,7 @@ export const useSubmitStore = defineStore("submit", () => {
     // actions
     loadWall,
     selectTemplate,
+    changeTemplate,
     fillSlot,
     setTransform,
     removeSlot,

@@ -7,7 +7,7 @@ import { toCompositeQueueDTO } from "../lib/dto.js";
 import { asyncHandler } from "../middleware/validate.js";
 import { env } from "../env.js";
 import type { TemplateVariant } from "@direct-collage/shared";
-import { TEMPLATES } from "@direct-collage/shared";
+import { TEMPLATES, ENABLED_TEMPLATES } from "@direct-collage/shared";
 
 export const submitRouter = Router();
 
@@ -43,8 +43,11 @@ submitRouter.post(
     }
 
     const templateVariant = req.body.template_variant as TemplateVariant;
-    if (!(templateVariant in TEMPLATES)) {
-      throw new ApiError(400, `Unknown template_variant: ${templateVariant}`);
+    // Defense-in-depth: the client gate (ENABLED_TEMPLATES) hides disabled
+    // variants from the picker, but a hand-crafted request could submit one.
+    // Reject here so the gate is authoritative server-side too.
+    if (!ENABLED_TEMPLATES.includes(templateVariant)) {
+      throw new ApiError(400, `Unknown or disabled template_variant: ${templateVariant}`);
     }
 
     const wall = await prisma.wall.findUnique({ where: { slug: wallSlug } });
