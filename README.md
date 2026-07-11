@@ -17,8 +17,8 @@ direct-collage/
 
 ## Prerequisites
 
-- Node.js **>= 16.14** (18+ recommended)
-- npm 8+
+- Node.js **>= 20** (developed and tested on Node 24)
+- npm 10+
 
 ## Getting started
 
