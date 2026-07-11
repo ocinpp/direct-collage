@@ -1,0 +1,31 @@
+{
+  "name": "direct-collage",
+  "version": "0.1.0",
+  "private": true,
+  "description": "DirectCollage — photo-booth-style UGC collage platform (MVP)",
+  "workspaces": [
+    "shared",
+    "server",
+    "submission",
+    "admin",
+    "wall"
+  ],
+  "scripts": {
+    "dev": "concurrently -k -n shared,server,submission,admin,wall -c green,cyan,magenta,blue,yellow \"npm:dev -w @direct-collage/shared\" \"npm:dev -w @direct-collage/server\" \"npm:dev -w @direct-collage/submission\" \"npm:dev -w @direct-collage/admin\" \"npm:dev -w @direct-collage/wall\"",
+    "dev:server": "npm:dev -w @direct-collage/server",
+    "dev:submission": "npm:dev -w @direct-collage/submission",
+    "dev:admin": "npm:dev -w @direct-collage/admin",
+    "dev:wall": "npm:dev -w @direct-collage/wall",
+    "build": "npm run build -w @direct-collage/shared && npm run build -w @direct-collage/server && npm run build -w @direct-collage/submission && npm run build -w @direct-collage/admin && npm run build -w @direct-collage/wall",
+    "db:migrate": "npm run migrate -w @direct-collage/server",
+    "db:seed": "npm run seed -w @direct-collage/server",
+    "db:reset": "npm run reset -w @direct-collage/server"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "typescript": "^5.3.3"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

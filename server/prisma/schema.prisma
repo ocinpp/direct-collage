@@ -1,0 +1,57 @@
+// DirectCollage data model (SQLite for the MVP; see PRD v2.6 §8.2).
+// Switching provider to "postgresql" later is a one-line change via Prisma.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model Admin {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+}
+
+model Wall {
+  id          String       @id @default(cuid())
+  slug        String       @unique
+  name        String
+  // User-facing display title shown at the top of the media wall (PRD §6.3.5).
+  // Falls back to `name` when null/empty.
+  title       String?
+  // ACTIVE | PAUSED  (see shared AspectRatio/WallStatus)
+  status      String       @default("ACTIVE")
+  // 1:1 | 4:5 | 9:16  (default 1:1 square per PRD v2.4)
+  aspectRatio String       @default("1:1")
+  bgColor     String?
+  headerLogo  String?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  composites  Composite[]
+}
+
+model Composite {
+  id                String   @id @default(cuid())
+  wallId            String
+  wall              Wall     @relation(fields: [wallId], references: [id])
+  // Filename under uploads/ (storageKey), resolved to a URL by StorageAdapter
+  storageKey        String
+  // Template variant id, e.g. "solo" | "triad-topbig"  (see shared/templates.ts)
+  templateVariant   String
+  // PENDING | APPROVED | REJECTED  (REJECTED = soft-delete per PRD §6.2.3)
+  status            String   @default("PENDING")
+  permissionGranted Boolean
+  // Server-validated pixel dimensions (decoded via sharp)
+  width             Int
+  height            Int
+  createdAt         DateTime @default(now())
+  reviewedAt        DateTime?
+
+  @@index([wallId, status])
+  @@index([wallId, createdAt])
+}

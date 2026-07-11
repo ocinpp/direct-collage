@@ -1,0 +1,67 @@
+@import "tailwindcss";
+
+/* Tailwind v4 theme tokens via @theme. Keep minimal for the submission portal. */
+@theme {
+  --color-brand-50: #eef2ff;
+  --color-brand-100: #e0e7ff;
+  --color-brand-500: #6366f1;
+  --color-brand-600: #4f46e5;
+  --color-brand-700: #4338ca;
+}
+
+/* Prevent iOS pull-to-refresh / rubber-banding while cropping on the portal. */
+html,
+body {
+  overscroll-behavior: none;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+  /* Use dvh so iOS Safari's collapsing URL bar doesn't crop the page. */
+  min-height: 100dvh;
+}
+
+#app {
+  min-height: 100dvh;
+}
+
+/*
+ * Touch-friendly zoom slider. Range inputs need vendor resets + explicit
+ * thumb sizing; Tailwind's `accent-color` alone leaves the thumb tiny (~12px),
+ * well below the 44px touch target guideline. This gives a 22px thumb on a
+ * 6px track — easy to drag on a phone.
+ */
+.dc-zoom-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  cursor: pointer;
+}
+.dc-zoom-slider::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.25);
+}
+.dc-zoom-slider::-moz-range-track {
+  height: 6px;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.25);
+}
+.dc-zoom-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  margin-top: -8px; /* center the 22px thumb on the 6px track */
+  height: 22px;
+  width: 22px;
+  border-radius: 9999px;
+  background: #6366f1; /* brand-500 */
+  border: 2px solid white;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+.dc-zoom-slider::-moz-range-thumb {
+  height: 22px;
+  width: 22px;
+  border-radius: 9999px;
+  background: #6366f1;
+  border: 2px solid white;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+}
