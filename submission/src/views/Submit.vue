@@ -128,7 +128,7 @@ const showEditor = computed(() => editingSlot.value !== null && template.value !
     the URL bar, which pushes the submit button off-screen. 100dvh tracks the
     actual visible viewport as the URL bar shows/hides.
   -->
-  <div class="mx-auto flex min-h-dvh max-w-md flex-col p-4">
+  <div class="mx-auto flex min-h-dvh max-w-md flex-col px-5 py-6">
     <!-- Hidden file input; re-used for whichever slot is active -->
     <input
       ref="fileInput"
@@ -138,28 +138,29 @@ const showEditor = computed(() => editingSlot.value !== null && template.value !
       @change="onFileChosen"
     />
 
-    <!-- Header -->
-    <header class="mb-3 flex items-center justify-between">
-      <h1 class="text-lg font-semibold">{{ wall?.name ?? "DirectCollage" }}</h1>
+    <!-- Header: bold display type, the marquee voice -->
+    <header class="mb-6 flex items-end justify-between border-b-2 border-ink pb-3">
+      <h1 class="font-display text-2xl uppercase leading-none tracking-tight">
+        {{ (wall?.name ?? "DirectCollage").toUpperCase() }}
+      </h1>
       <!--
-        The template badge is a button so the user can switch layouts. Only
-        shown in the edit/submitting phases (not during pick). Confirming the
-        switch clears any photos already arranged, since slot counts differ.
+        Template badge as a stamp-style switch button. Only shown in edit/
+        submitting phases. Tapping switches layouts (confirms if photos placed).
       -->
       <button
         v-if="template && (phase === 'edit' || phase === 'submitting')"
         type="button"
-        class="flex items-center gap-1 rounded-full bg-neutral-800 px-3 py-1 text-xs text-neutral-300 hover:bg-neutral-700"
+        class="stamp-press flex items-center gap-1 border border-ink bg-white px-2.5 py-1 font-mono text-[10px] font-bold uppercase tracking-wider text-ink hover:bg-brand-50"
         @click="onChangeTemplate"
       >
-        {{ template.label }}
-        <span class="text-neutral-500">▾</span>
+        {{ template.label.replace(/^[^-]+—\s*/, "") }}
+        <span>▾</span>
       </button>
     </header>
 
     <!-- Loading -->
     <div v-if="phase === 'loading'" class="flex flex-1 items-center justify-center">
-      <span class="animate-pulse text-neutral-400">Loading…</span>
+      <span class="h-8 w-8 animate-spin rounded-full border-2 border-ink/20 border-t-brand-500" />
     </div>
 
     <!-- Error (wall) -->
@@ -167,21 +168,27 @@ const showEditor = computed(() => editingSlot.value !== null && template.value !
       v-else-if="phase === 'error'"
       class="flex flex-1 flex-col items-center justify-center gap-2 text-center"
     >
-      <p class="text-rose-400">{{ wallError }}</p>
+      <p class="border-2 border-brand-500 bg-brand-50 px-4 py-2 font-medium text-brand-700">
+        {{ wallError }}
+      </p>
     </div>
 
-    <!-- Done -->
+    <!-- Done: stamped "SUBMITTED!" -->
     <div
       v-else-if="phase === 'done'"
-      class="flex flex-1 flex-col items-center justify-center gap-3 text-center"
+      class="flex flex-1 flex-col items-center justify-center gap-5 text-center"
     >
-      <div class="text-5xl">🎉</div>
-      <h2 class="text-xl font-semibold">Submitted!</h2>
-      <p class="text-neutral-400">
+      <!-- Rubber-stamp treatment: hard border, slight rotation, warm red -->
+      <div class="animate-stamp-in border-4 border-brand-500 px-6 py-4">
+        <span class="font-display text-3xl uppercase tracking-tight text-brand-500">
+          Submitted!
+        </span>
+      </div>
+      <p class="max-w-xs text-sm text-ink/70">
         Your collage is in the moderation queue. It'll appear on the wall once approved.
       </p>
       <button
-        class="rounded-lg border border-neutral-700 px-4 py-2 text-sm"
+        class="stamp-press border-2 border-ink bg-white px-6 py-2.5 font-display text-sm uppercase tracking-wide text-ink hover:bg-ink hover:text-paper"
         type="button"
         @click="onMakeAnother"
       >
@@ -190,7 +197,7 @@ const showEditor = computed(() => editingSlot.value !== null && template.value !
     </div>
 
     <!-- Pick phase: choose a template layout -->
-    <div v-else-if="phase === 'pick'" class="flex-1 overflow-y-auto py-4">
+    <div v-else-if="phase === 'pick'" class="flex-1 overflow-y-auto">
       <TemplatePicker
         :templates="store.enabledTemplates"
         @select="onSelectTemplate"
@@ -199,14 +206,15 @@ const showEditor = computed(() => editingSlot.value !== null && template.value !
 
     <!-- Edit / Submitting render the grid -->
     <template v-else>
-      <div v-if="prepareError" class="mb-2 rounded bg-rose-900/40 px-3 py-2 text-sm text-rose-200">
+      <div
+        v-if="prepareError"
+        class="mb-3 border-2 border-brand-500 bg-brand-50 px-3 py-2 text-sm font-medium text-brand-700"
+      >
         {{ prepareError }}
       </div>
 
       <!-- The grid of slot thumbnails. Tapping a slot opens the full-screen
-           editor (defined at the bottom of this template). The grid itself is
-           just a layout preview — no crop/zoom UI here, so narrow slots like
-           Pentagon-Row columns remain usable. -->
+           editor (defined at the bottom of this template). -->
       <div v-if="template" class="relative flex justify-center">
         <SlotGrid
           :template="template"
@@ -220,18 +228,19 @@ const showEditor = computed(() => editingSlot.value !== null && template.value !
       </div>
 
       <!-- Footer: permission + submit -->
-      <div class="mt-auto pt-4">
-        <label class="flex items-start gap-2 text-sm text-neutral-300">
+      <div class="mt-auto pt-5">
+        <label class="flex items-start gap-2.5 text-sm text-ink/80">
           <input
             v-model="permissionGranted"
             type="checkbox"
-            class="mt-0.5 h-4 w-4 accent-brand-500"
+            class="mt-0.5 h-5 w-5 accent-brand-500"
           />
           <span>I grant permission to display this collage on the wall.</span>
         </label>
 
+        <!-- Stamp-style submit button: solid red, hard edges, hard shadow -->
         <button
-          class="mt-3 w-full rounded-lg bg-brand-600 px-4 py-3 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40"
+          class="stamp-press mt-4 w-full border-2 border-ink bg-brand-500 px-4 py-4 font-display text-base uppercase tracking-wide text-white stamp-shadow disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none"
           type="button"
           :disabled="!store.allSlotsFilled || !permissionGranted || busy"
           @click="onSubmit"
@@ -240,7 +249,10 @@ const showEditor = computed(() => editingSlot.value !== null && template.value !
           <span v-else>Submit collage</span>
         </button>
 
-        <p v-if="store.submitError" class="mt-2 text-center text-sm text-rose-400">
+        <p
+          v-if="store.submitError"
+          class="mt-2 text-center text-sm font-medium text-brand-600"
+        >
           {{ store.submitError }}
         </p>
       </div>

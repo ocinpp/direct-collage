@@ -50,7 +50,7 @@ function slotStyle(s: { x: number; y: number; w: number; h: number }) {
 
 <template>
   <div
-    class="relative w-full max-w-sm gap-1 rounded-xl bg-black p-1"
+    class="relative w-full max-w-sm gap-1 border-2 border-ink bg-white p-1.5 stamp-shadow"
     :style="{ aspectRatio: containerAspect }"
   >
     <div

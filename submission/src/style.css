@@ -1,34 +1,130 @@
+/* ─────────────────────────────────────────────────────────────
+ * DirectCollage submission portal — Retro Photobooth
+ * Cream paper · film grain · bold condensed display type ·
+ * hard-edged stamp/sticker surfaces · warm red accent.
+ *
+ * Deliberately NOT: dark gradients, frosted glass, soft shadows,
+ * rounded pills, single neutral sans. This is a zine/print aesthetic.
+ * ───────────────────────────────────────────────────────────── */
+
+/* Self-hosted webfonts (no external request). */
+@import "@fontsource/archivo-black/400.css"; /* display (only one weight) */
+@import "@fontsource/inter/400.css";
+@import "@fontsource/inter/500.css";
+@import "@fontsource/inter/600.css";
+@import "@fontsource/inter/700.css";
+@import "@fontsource/jetbrains-mono/500.css";
+@import "@fontsource/jetbrains-mono/700.css";
+
 @import "tailwindcss";
 
-/* Tailwind v4 theme tokens via @theme. Keep minimal for the submission portal. */
+/* ── Theme tokens ───────────────────────────────────────────── */
 @theme {
-  --color-brand-50: #eef2ff;
-  --color-brand-100: #e0e7ff;
-  --color-brand-500: #6366f1;
-  --color-brand-600: #4f46e5;
-  --color-brand-700: #4338ca;
+  /* Brand: warm stamp-red scale (used sparingly — one accent, committed). */
+  --color-brand-50: #fef2f2;
+  --color-brand-100: #fee2e2;
+  --color-brand-200: #fecaca;
+  --color-brand-300: #fca5a5;
+  --color-brand-400: #f87171;
+  --color-brand-500: #dc2626; /* stamp red — the accent */
+  --color-brand-600: #b91c1c;
+  --color-brand-700: #991b1b;
+  --color-brand-800: #7f1d1d;
+  --color-brand-900: #641e1e;
+  --color-brand-950: #3b0a0a;
+
+  /* Ink: warm near-black for text on cream. */
+  --color-ink: #1c1917;
+
+  /* Paper: warm cream background. */
+  --color-paper: #faf6f0;
+
+  /* Type system: display + body + mono pairing. */
+  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    Helvetica, Arial, sans-serif;
+  --font-display: "Archivo Black", "Inter", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
-/* Prevent iOS pull-to-refresh / rubber-banding while cropping on the portal. */
+/* ── Film grain overlay ───────────────────────────────────────
+ * SVG <feTurbulence> noise as a data-URI background, ~1KB, render-once.
+ * Real photos have grain; smooth gradients don't — this is the strongest
+ * anti-AI element. Fixed + pointer-events-none so it never scrolls or blocks.
+ */
+.grain-overlay::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  pointer-events: none;
+  opacity: 0.05;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* ── Stamp / sticker hard shadow ──────────────────────────────
+ * Flat offset shadow (no blur) — the printed/zine look. Pair with a hard
+ * 1px ink border. On :active the shadow collapses + element shifts, like
+ * pressing a physical stamp.
+ */
+.stamp-shadow {
+  box-shadow: 3px 3px 0 var(--color-ink);
+}
+.stamp-shadow-sm {
+  box-shadow: 2px 2px 0 var(--color-ink);
+}
+.stamp-press {
+  transition:
+    transform 0.08s ease-out,
+    box-shadow 0.08s ease-out;
+}
+.stamp-press:active {
+  transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0 var(--color-ink);
+}
+
+/* ── Global element resets ──────────────────────────────────── */
 html,
 body {
   overscroll-behavior: none;
   -webkit-touch-callout: none;
   -webkit-user-select: none;
   user-select: none;
-  /* Use dvh so iOS Safari's collapsing URL bar doesn't crop the page. */
   min-height: 100dvh;
+  font-family: var(--font-sans);
+  /* Light theme: ink text on cream paper. */
+  background-color: var(--color-paper);
+  color: var(--color-ink);
 }
 
 #app {
   min-height: 100dvh;
 }
 
+/* ── Stamped success animation ────────────────────────────────
+ * Quick stamp-down: scales in fast with a tiny rotation, like a rubber stamp
+ * hitting paper. Replaces the springy bounce.
+ */
+@keyframes dc-stamp-in {
+  0% {
+    transform: scale(1.4) rotate(-8deg);
+    opacity: 0;
+  }
+  70% {
+    transform: scale(0.95) rotate(-3deg);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1) rotate(-3deg);
+  }
+}
+.animate-stamp-in {
+  animation: dc-stamp-in 0.35s ease-out both;
+}
+
+/* ── Touch-friendly zoom slider (light theme) ───────────────── */
 /*
- * Touch-friendly zoom slider. Range inputs need vendor resets + explicit
- * thumb sizing; Tailwind's `accent-color` alone leaves the thumb tiny (~12px),
- * well below the 44px touch target guideline. This gives a 22px thumb on a
- * 6px track — easy to drag on a phone.
+ * Dark track + ink thumb on cream. Kept functionally identical to before,
+ * just recolored for the light theme.
  */
 .dc-zoom-slider {
   -webkit-appearance: none;
@@ -39,29 +135,48 @@ body {
 .dc-zoom-slider::-webkit-slider-runnable-track {
   height: 6px;
   border-radius: 9999px;
-  background: rgba(255, 255, 255, 0.25);
+  background: rgba(28, 25, 23, 0.2); /* ink at 20% */
 }
 .dc-zoom-slider::-moz-range-track {
   height: 6px;
   border-radius: 9999px;
-  background: rgba(255, 255, 255, 0.25);
+  background: rgba(28, 25, 23, 0.2);
 }
 .dc-zoom-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  margin-top: -8px; /* center the 22px thumb on the 6px track */
+  margin-top: -8px;
   height: 22px;
   width: 22px;
   border-radius: 9999px;
-  background: #6366f1; /* brand-500 */
-  border: 2px solid white;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+  background: var(--color-ink);
+  border: 2px solid var(--color-paper);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
 }
 .dc-zoom-slider::-moz-range-thumb {
   height: 22px;
   width: 22px;
   border-radius: 9999px;
-  background: #6366f1;
-  border: 2px solid white;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+  background: var(--color-ink);
+  border: 2px solid var(--color-paper);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+/*
+ * Dark variant for the slider when it sits on the editor's dark canvas area
+ * (SlotEditor's zoom panel). White track + brand-red thumb on black bg.
+ */
+.dc-zoom-slider-dark::-webkit-slider-runnable-track {
+  background: rgba(255, 255, 255, 0.25);
+}
+.dc-zoom-slider-dark::-moz-range-track {
+  background: rgba(255, 255, 255, 0.25);
+}
+.dc-zoom-slider-dark::-webkit-slider-thumb {
+  background: var(--color-brand-500);
+  border-color: white;
+}
+.dc-zoom-slider-dark::-moz-range-thumb {
+  background: var(--color-brand-500);
+  border-color: white;
 }

@@ -89,8 +89,8 @@ function onPick() {
 <template>
   <button
     type="button"
-    class="relative h-full w-full overflow-hidden rounded-lg border-2 transition-colors"
-    :class="active ? 'border-brand-500' : 'border-transparent'"
+    class="relative h-full w-full overflow-hidden border-2 transition-colors"
+    :class="active ? 'border-brand-500' : 'border-ink'"
     @click="onPick"
   >
     <!-- Filled: WYSIWYG canvas preview (no editing here — tap opens the editor) -->
@@ -101,19 +101,21 @@ function onPick() {
       aria-hidden="true"
     />
 
-    <!-- Empty: "+" placeholder -->
+    <!-- Empty: dashed border on white, big "+", mono uppercase label -->
     <span
       v-else
-      class="absolute inset-0 flex flex-col items-center justify-center gap-1 bg-neutral-800 text-neutral-400"
+      class="absolute inset-0 flex flex-col items-center justify-center gap-1 border-2 border-dashed border-ink/30 bg-white text-ink/50"
     >
       <span class="text-4xl leading-none">+</span>
-      <span class="px-1 text-center text-[10px] leading-tight">Add photo</span>
+      <span class="px-1 text-center font-mono text-[9px] font-bold uppercase leading-tight tracking-wider">
+        Add photo
+      </span>
     </span>
 
-    <!-- Remove chip (stops propagation so it doesn't also open the editor) -->
+    <!-- Remove chip: hard-edged stamp on the photo -->
     <span
       v-if="source"
-      class="absolute right-1.5 top-1.5 z-10 flex h-7 w-7 items-center justify-center rounded-full bg-black/60 text-sm font-semibold text-white hover:bg-black/80"
+      class="absolute right-1.5 top-1.5 z-10 flex h-7 w-7 items-center justify-center border border-ink bg-white text-sm font-bold text-ink hover:bg-brand-500 hover:text-white"
       @click.stop="emit('remove', slot.index)"
     >
       ✕

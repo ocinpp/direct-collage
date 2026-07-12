@@ -32,28 +32,27 @@ function slotRects(template: TemplateDef) {
 </script>
 
 <template>
-  <div class="flex flex-col gap-5">
-    <div class="text-center">
-      <h2 class="text-lg font-semibold">Choose a layout</h2>
-      <p class="mt-1 text-sm text-neutral-400">
+  <div class="flex flex-col gap-6">
+    <div>
+      <h2 class="font-display text-xl uppercase tracking-tight text-ink">Choose a layout</h2>
+      <p class="mt-1 text-sm text-ink/60">
         Pick how many photos to combine into your collage.
       </p>
     </div>
 
     <!--
-      Flat grid — 7 layouts is few enough that family headers (Solo/Triad/...)
-      add noise without aiding discovery. The SVG preview + photo count on each
-      card is what the user actually navigates by.
+      Flat grid of stamp/sticker cards. White surface, hard ink border, flat
+      offset shadow. On press the shadow collapses + card shifts — "picked up."
     -->
-    <div class="grid grid-cols-2 gap-3 sm:grid-cols-3">
+    <div class="grid grid-cols-2 gap-4 sm:grid-cols-3">
       <button
         v-for="t in templates"
         :key="t.variant"
         type="button"
-        class="flex flex-col items-center gap-2 rounded-xl border border-neutral-700 bg-neutral-900 p-3 transition-colors hover:border-brand-500 hover:bg-neutral-800 active:scale-[0.98]"
+        class="stamp-press flex flex-col items-center gap-3 border-2 border-ink bg-white p-4 stamp-shadow-sm hover:bg-brand-50"
         @click="emit('select', t)"
       >
-        <!-- SVG mini-preview, generated from the template's rect geometry -->
+        <!-- SVG mini-preview in warm stamp-red -->
         <svg
           viewBox="0 0 100 100"
           class="h-20 w-20"
@@ -67,13 +66,12 @@ function slotRects(template: TemplateDef) {
             :y="r.y"
             :width="r.w"
             :height="r.h"
-            rx="3"
-            class="fill-brand-500/70 stroke-brand-300 stroke-1"
+            class="fill-brand-500"
           />
         </svg>
-        <span class="text-center text-xs leading-tight text-neutral-200">
+        <span class="text-center font-display text-xs uppercase leading-tight tracking-wide text-ink">
           {{ t.label.replace(/^[^-]+—\s*/, "") }}
-          <span class="block text-[10px] text-neutral-500">
+          <span class="mt-0.5 block font-mono text-[10px] font-normal normal-case text-ink/50">
             {{ t.slots }} photo{{ t.slots === 1 ? "" : "s" }}
           </span>
         </span>

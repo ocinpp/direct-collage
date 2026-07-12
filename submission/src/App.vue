@@ -3,7 +3,8 @@ import { RouterView } from "vue-router";
 </script>
 
 <template>
-  <div class="min-h-full bg-neutral-950 text-neutral-100">
+  <!-- grain-overlay adds the film-grain ::before layer site-wide. -->
+  <div class="grain-overlay min-h-full bg-paper text-ink">
     <RouterView />
   </div>
 </template>

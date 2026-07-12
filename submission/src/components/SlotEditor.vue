@@ -168,8 +168,8 @@ function renderPreview() {
   drawSlot(ctx, img, frameRectNorm, props.transform, { w: cw, h: ch });
   ctx.restore();
 
-  // --- White border around the frame ---
-  ctx.strokeStyle = "#ffffff";
+  // --- Brand-pink border around the frame (ties the editor into the palette) ---
+  ctx.strokeStyle = "#f472b6"; // brand-400
   ctx.lineWidth = 2 * dpr;
   ctx.strokeRect(frameX, frameY, frameW, frameH);
 }
@@ -217,37 +217,38 @@ const canEdit = computed(() => props.source !== null);
 </script>
 
 <template>
-  <!-- Full-screen overlay -->
+  <!--
+    Full-screen overlay. Cream chrome (header/footer/buttons) for the photobooth
+    aesthetic, but the editing canvas area stays dark (black) so the photo and
+    the dimmed-ghost/bright-crop-frame read with proper contrast.
+  -->
   <div
-    class="fixed inset-0 z-50 flex flex-col bg-neutral-950 text-neutral-100"
+    class="fixed inset-0 z-50 flex flex-col bg-paper text-ink"
     role="dialog"
     aria-modal="true"
   >
-    <!-- Top bar -->
-    <header class="flex shrink-0 items-center justify-between px-4 py-3">
+    <!-- Top bar: cream chrome -->
+    <header class="flex shrink-0 items-center justify-between border-b-2 border-ink px-5 py-3">
       <button
         type="button"
-        class="rounded-lg px-3 py-1.5 text-sm text-neutral-300 hover:bg-neutral-800"
+        class="stamp-press border-2 border-ink bg-white px-4 py-1.5 font-display text-xs uppercase tracking-wide hover:bg-ink hover:text-paper"
         @click="emit('close')"
       >
         ← Back
       </button>
-      <span class="text-sm text-neutral-400">
+      <span class="font-mono text-xs font-bold uppercase tracking-widest text-ink/60">
         Photo {{ slotNumber }} of {{ totalSlots }}
       </span>
-      <span class="w-12" />
+      <span class="w-14" />
     </header>
 
-    <!-- Editing area -->
-    <div class="flex flex-1 flex-col items-center justify-center gap-4 px-4 pb-4">
-      <!-- Filled: single square canvas renders both the dimmed ghost (full
-           photo context) and the bright crop frame (what will appear in the
-           slot). See renderPreview() for the two-pass draw. -->
+    <!-- Editing area: dark canvas region for photo contrast -->
+    <div class="flex flex-1 flex-col items-center justify-center gap-4 bg-neutral-950 px-4 pb-4">
       <template v-if="canEdit">
         <div class="relative w-full" :style="editorAspectStyle">
           <canvas
             ref="canvasRef"
-            class="absolute inset-0 h-full w-full cursor-grab touch-none rounded-lg active:cursor-grabbing"
+            class="absolute inset-0 h-full w-full cursor-grab touch-none active:cursor-grabbing"
             @pointerdown="onPointerDown"
             @pointermove="onPointerMove"
             @pointerup="onPointerUp"
@@ -255,46 +256,46 @@ const canEdit = computed(() => props.source !== null);
           />
         </div>
 
-        <!-- Full-width zoom slider -->
-        <div class="flex w-full max-w-md items-center gap-3 rounded-lg bg-neutral-900 px-4 py-3">
-          <span class="text-sm tabular-nums text-neutral-400">−</span>
+        <!-- Zoom slider on the dark canvas area (dark-theme slider variant) -->
+        <div class="flex w-full max-w-md items-center gap-3 border border-white/15 bg-white/5 px-4 py-3">
+          <span class="font-mono text-sm tabular-nums text-neutral-400">−</span>
           <input
             type="range"
             min="0"
             max="100"
             :value="zoomPct"
-            class="dc-zoom-slider h-6 flex-1"
+            class="dc-zoom-slider dc-zoom-slider-dark h-6 flex-1"
             @input="onZoomInput"
             @pointerdown.stop
           />
-          <span class="text-sm tabular-nums text-neutral-400">+</span>
+          <span class="font-mono text-sm tabular-nums text-neutral-400">+</span>
         </div>
       </template>
 
-      <!-- Empty: tap "+" to pick (matches grid UX), or spinner while processing -->
+      <!-- Empty: stamp-style "+" on the dark canvas area -->
       <button
         v-else
         type="button"
-        class="relative flex aspect-square w-full max-w-xs flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed border-neutral-700 text-neutral-400 hover:border-brand-500 hover:bg-neutral-900"
+        class="relative flex aspect-square w-full max-w-xs flex-col items-center justify-center gap-3 border-2 border-dashed border-white/20 text-neutral-400 transition-colors hover:border-brand-400 hover:bg-white/5"
         @click="emit('pick')"
       >
         <template v-if="preparing">
-          <span class="h-8 w-8 animate-spin rounded-full border-2 border-neutral-600 border-t-brand-500" />
-          <span class="text-sm">Processing photo…</span>
+          <span class="h-8 w-8 animate-spin rounded-full border-2 border-white/20 border-t-brand-500" />
+          <span class="font-mono text-sm">Processing photo…</span>
         </template>
         <template v-else>
           <span class="text-6xl leading-none">+</span>
-          <span class="text-sm">Add photo</span>
+          <span class="font-mono text-sm font-bold uppercase tracking-wider">Add photo</span>
         </template>
       </button>
     </div>
 
-    <!-- Bottom actions -->
-    <footer class="flex shrink-0 items-center justify-between gap-3 px-4 pb-6 pt-2">
+    <!-- Bottom actions: cream chrome, stamp-style buttons -->
+    <footer class="flex shrink-0 items-center justify-between gap-3 border-t-2 border-ink bg-paper px-5 pb-6 pt-3">
       <button
         v-if="canEdit"
         type="button"
-        class="rounded-lg border border-rose-700 px-4 py-2.5 text-sm font-medium text-rose-300 hover:bg-rose-950/40"
+        class="stamp-press border-2 border-ink bg-white px-5 py-2.5 font-display text-xs uppercase tracking-wide text-ink hover:bg-brand-500 hover:text-white"
         @click="emit('remove')"
       >
         Remove
@@ -304,7 +305,7 @@ const canEdit = computed(() => props.source !== null);
       <button
         v-if="canEdit"
         type="button"
-        class="rounded-lg bg-brand-600 px-6 py-2.5 text-sm font-semibold text-white hover:bg-brand-500"
+        class="stamp-press border-2 border-ink bg-brand-500 px-6 py-2.5 font-display text-xs uppercase tracking-wide text-white stamp-shadow-sm"
         @click="emit('close')"
       >
         Done
