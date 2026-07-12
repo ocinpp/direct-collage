@@ -52,6 +52,14 @@ export function drawSlot(
   slotRect: NormalizedRect,
   transform: SlotTransform,
   canvasDims: { w: number; h: number },
+  /**
+   * If true (default), clip the draw to the slot rect — used by the baker and
+   * by previews that want the slot to read as a self-contained cell. If false,
+   * the image is drawn unclipped (can extend beyond the slot rect) — used by
+   * the crop editor's dimmed "full photo" layer, which needs to show the parts
+   * being cropped away outside the frame.
+   */
+  clip = true,
 ) {
   const rectX = slotRect.x * canvasDims.w;
   const rectY = slotRect.y * canvasDims.h;
@@ -72,9 +80,11 @@ export function drawSlot(
   const dy = rectY + (rectH - drawH) / 2 + transform.offsetY * drawScale;
 
   ctx.save();
-  ctx.beginPath();
-  ctx.rect(rectX, rectY, rectW, rectH);
-  ctx.clip();
+  if (clip) {
+    ctx.beginPath();
+    ctx.rect(rectX, rectY, rectW, rectH);
+    ctx.clip();
+  }
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = "high";
   ctx.drawImage(img, dx, dy, drawW, drawH);

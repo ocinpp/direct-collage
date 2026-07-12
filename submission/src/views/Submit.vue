@@ -4,7 +4,9 @@ import { useRoute } from "vue-router";
 import { storeToRefs } from "pinia";
 import { useSubmitStore } from "../stores/submit.js";
 import SlotGrid from "../components/SlotGrid.vue";
+import SlotEditor from "../components/SlotEditor.vue";
 import TemplatePicker from "../components/TemplatePicker.vue";
+import type { SlotTransform } from "../lib/baker.js";
 import type { TemplateDef } from "@direct-collage/shared";
 
 const route = useRoute();
@@ -13,9 +15,15 @@ const { wall, wallError, phase, template, sources, transforms, activeSlot, ratio
   storeToRefs(store);
 
 const permissionGranted = ref(false);
-const preparing = ref<number | null>(null); // slot index currently preparing
+const preparing = ref<number | null>(null); // slot index currently being processed
 const prepareError = ref<string | null>(null);
 const fileInput = ref<HTMLInputElement | null>(null);
+
+/**
+ * Which slot index is currently open in the full-screen editor (null = closed).
+ * The editor is where crop/zoom/pan happens — the grid just shows thumbnails.
+ */
+const editingSlot = ref<number | null>(null);
 
 const wallSlug = computed(() => route.params.wallSlug as string);
 
@@ -39,8 +47,26 @@ function onChangeTemplate() {
   store.changeTemplate();
 }
 
-function pickFile(slotIndex: number) {
-  preparing.value = slotIndex;
+/**
+ * Open the full-screen editor for a slot. Works for both filled slots (edit
+ * the crop) and empty slots (the editor's "Choose photo" button triggers the
+ * file picker).
+ */
+function openEditor(slotIndex: number) {
+  editingSlot.value = slotIndex;
+}
+
+function closeEditor() {
+  editingSlot.value = null;
+}
+
+/**
+ * The editor's "Choose photo" button (for empty slots) asks us to open the
+ * file picker. We keep the editor open so the photo appears in it once loaded.
+ */
+function pickFromEditor() {
+  if (editingSlot.value === null) return;
+  preparing.value = editingSlot.value;
   prepareError.value = null;
   fileInput.value?.click();
 }
@@ -49,7 +75,12 @@ async function onFileChosen(e: Event) {
   const input = e.target as HTMLInputElement;
   const file = input.files?.[0];
   input.value = ""; // reset so same file can be re-picked
-  if (!file || preparing.value === null) return;
+  // If the user canceled the picker, file is undefined — reset preparing so
+  // the "Processing photo…" state doesn't get stuck.
+  if (!file || preparing.value === null) {
+    preparing.value = null;
+    return;
+  }
 
   const slotIndex = preparing.value;
   prepareError.value = null;
@@ -62,24 +93,33 @@ async function onFileChosen(e: Event) {
   }
 }
 
+function onEditorChange(t: SlotTransform) {
+  if (editingSlot.value !== null) store.setTransform(editingSlot.value, t);
+}
+
+function onEditorRemove() {
+  if (editingSlot.value !== null) store.removeSlot(editingSlot.value);
+  editingSlot.value = null; // close editor after removing
+}
+
 async function onSubmit() {
   if (!permissionGranted.value) return;
   await store.submit(true);
-  // If submit succeeded, the store flipped phase to "done"; clear permission
-  // so a follow-up "make another" starts from a clean consent state.
   if (store.phase === "done") {
     permissionGranted.value = false;
   }
 }
 
-/** After the user clicks "Make another", also clear local UI state. */
 function onMakeAnother() {
   store.reset();
   permissionGranted.value = false;
   prepareError.value = null;
+  editingSlot.value = null;
 }
 
 const busy = computed(() => preparing.value !== null || phase.value === "submitting");
+
+const showEditor = computed(() => editingSlot.value !== null && template.value !== null);
 </script>
 
 <template>
@@ -163,7 +203,10 @@ const busy = computed(() => preparing.value !== null || phase.value === "submitt
         {{ prepareError }}
       </div>
 
-      <!-- The grid, with an overlay while a photo is being prepared -->
+      <!-- The grid of slot thumbnails. Tapping a slot opens the full-screen
+           editor (defined at the bottom of this template). The grid itself is
+           just a layout preview — no crop/zoom UI here, so narrow slots like
+           Pentagon-Row columns remain usable. -->
       <div v-if="template" class="relative flex justify-center">
         <SlotGrid
           :template="template"
@@ -171,20 +214,9 @@ const busy = computed(() => preparing.value !== null || phase.value === "submitt
           :sources="sources"
           :transforms="transforms"
           :active-slot="activeSlot"
-          @pick="(idx) => pickFile(idx)"
-          @change="(idx, t) => store.setTransform(idx, t)"
+          @pick="(idx) => openEditor(idx)"
           @remove="(idx) => store.removeSlot(idx)"
         />
-
-        <!-- Processing overlay: sits on top of the grid so the user sees
-             feedback right where their photo will appear. -->
-        <div
-          v-if="preparing !== null"
-          class="absolute inset-0 z-20 flex flex-col items-center justify-center gap-2 rounded-xl bg-black/70 text-sm text-neutral-200"
-        >
-          <span class="h-6 w-6 animate-spin rounded-full border-2 border-neutral-500 border-t-brand-500" />
-          <span>Processing photo…</span>
-        </div>
       </div>
 
       <!-- Footer: permission + submit -->
@@ -213,5 +245,26 @@ const busy = computed(() => preparing.value !== null || phase.value === "submitt
         </p>
       </div>
     </template>
+
+    <!--
+      Full-screen slot editor overlay. Renders above the whole view when a slot
+      is being edited. This is where crop/zoom/pan happens — the grid above is
+      just a thumbnail preview. Solves the tiny-stripe problem: even a 45px-wide
+      Pentagon-Row column gets a full-screen edit area here.
+    -->
+    <SlotEditor
+      v-if="showEditor && template && editingSlot !== null"
+      :slot="template.rect[editingSlot]!"
+      :source="sources[editingSlot] ?? null"
+      :transform="transforms[editingSlot]!"
+      :ratio="ratio"
+      :slot-number="editingSlot + 1"
+      :total-slots="template.slots"
+      :preparing="preparing === editingSlot"
+      @close="closeEditor"
+      @change="onEditorChange"
+      @pick="pickFromEditor"
+      @remove="onEditorRemove"
+    />
   </div>
 </template>

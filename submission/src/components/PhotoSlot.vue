@@ -1,67 +1,31 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
+import { onBeforeUnmount, onMounted, ref, watch } from "vue";
 import type { AspectRatio, TemplateSlot } from "@direct-collage/shared";
-import { OUTPUT_DIMS, type PreparedImage } from "../lib/image.js";
+import type { PreparedImage } from "../lib/image.js";
 import { drawSlot, type SlotTransform } from "../lib/baker.js";
 
+/**
+ * Lightweight slot THUMBNAIL shown in the grid. Renders a WYSIWYG preview of
+ * the slot via drawSlot() (so the grid reflects the baked result), but does
+ * NOT contain any crop/zoom/pan editing UI — that moved to the full-screen
+ * SlotEditor. Tapping a filled slot (or the empty placeholder) emits `pick`,
+ * which the parent turns into "open the editor for this slot".
+ */
 const props = defineProps<{
   slot: TemplateSlot;
   source: PreparedImage | null;
   transform: SlotTransform;
-  /** Wall's aspect ratio — used to size the slot output dims correctly. */
   ratio: AspectRatio;
   active: boolean;
 }>();
 
 const emit = defineEmits<{
   pick: [slotIndex: number];
-  change: [slotIndex: number, transform: SlotTransform];
   remove: [slotIndex: number];
 }>();
 
-// --- Preview canvas (WYSIWYG with the baker) ---
 const canvasRef = ref<HTMLCanvasElement | null>(null);
 const imgEl = ref<HTMLImageElement | null>(null);
-
-/**
- * Max zoom scale (cover-relative), per PRD §6.1.4.
- *
- * The PRD formula is in ABSOLUTE terms (slot px per source px):
- *   absMax = min(srcW/slotW, srcH/slotH) * 1.2
- * At that limit, the source image is drawn at a scale where each output pixel
- * maps to ~1/1.2 of a source pixel — i.e. the source covers up to 1.2× the
- * slot, which is the anti-pixelation ceiling (going further would upscale
- * source pixels and visibly pixelate).
- *
- * transform.scale is COVER-RELATIVE (1.0 = image just covers the slot).
- * drawSlot computes drawScale = coverScale * transform.scale. To cap drawScale
- * at absMax, solve: transform.scale_max = absMax / coverScale.
- *
- * Worked example (2160×2160 source, Solo 1080×1080 slot):
- *   absMax     = min(2,2)*1.2 = 2.4   (source can be up to 2.4× the slot)
- *   coverScale = 0.5                 (image shrunk 2× to just cover)
- *   maxScale   = 2.4 / 0.5 = 4.8     (zoom from "whole photo" to ~21% of it)
- *
- * At maxScale, drawScale = 0.5 × 4.8 = 2.4, so the source is drawn at
- * 2160 × 2.4 = 5184px into the 1080 slot — that's DOWNSAMPLING (no
- * pixelation). The source region shown = 1080/5184 = ~21% of the photo.
- *
- * slotOut dims derive from the wall's aspect ratio (not a hardcoded 1080²)
- * so 4:5/9:16 walls clamp correctly.
- */
-const maxScale = computed(() => {
-  if (!props.source) return 1;
-  const { w: outW, h: outH } = OUTPUT_DIMS[props.ratio];
-  const slotOutW = props.slot.w * outW;
-  const slotOutH = props.slot.h * outH;
-  const absMax = Math.min(props.source.width / slotOutW, props.source.height / slotOutH) * 1.2;
-  const coverScale = Math.max(slotOutW / props.source.width, slotOutH / props.source.height);
-  return Math.max(1.05, absMax / coverScale);
-});
-
-const zoomPct = computed(() =>
-  Math.round(((props.transform.scale - 1) / (maxScale.value - 1 || 1)) * 100),
-);
 
 function loadSource() {
   if (!props.source) {
@@ -76,11 +40,6 @@ function loadSource() {
   img.src = props.source.url;
 }
 
-/**
- * Render the preview using drawSlot() — the EXACT same math as the baker.
- * The canvas is sized to the slot's CSS pixels (times devicePixelRatio for
- * sharpness), and drawSlot maps the normalized rect into it.
- */
 function renderPreview() {
   const canvas = canvasRef.value;
   const img = imgEl.value;
@@ -88,10 +47,6 @@ function renderPreview() {
 
   const rect = canvas.getBoundingClientRect();
   const dpr = window.devicePixelRatio || 1;
-  // The canvas represents a SQUARE region of the output canvas (the slot's
-  // own rect). We draw the source into a canvas whose aspect = slot aspect,
-  // sized to CSS * dpr. drawSlot gets a normalized rect of {0,0,1,1} and the
-  // canvas dims.
   canvas.width = Math.max(1, Math.round(rect.width * dpr));
   canvas.height = Math.max(1, Math.round(rect.height * dpr));
 
@@ -111,11 +66,9 @@ function renderPreview() {
   );
 }
 
-// Re-render whenever the source or transform changes.
 watch(() => [props.source, props.transform], loadSource, { deep: true });
 onMounted(() => loadSource());
 
-// Re-render on resize (responsive layout can change slot CSS size).
 let resizeObserver: ResizeObserver | null = null;
 onMounted(() => {
   const canvas = canvasRef.value;
@@ -128,229 +81,42 @@ onBeforeUnmount(() => {
   resizeObserver = null;
 });
 
-// --- Multi-touch gestures: one finger pans, two fingers pinch-to-zoom ---
-/**
- * Track up to 2 active pointers by pointerId so we can distinguish pan
- * (1 finger) from pinch (2 fingers). Pointer Events unify touch + mouse, so
- * this also works with a mouse (though pinch needs two pointers).
- */
-const pointers = ref<Map<number, { x: number; y: number }>>(new Map());
-/** Last position of the (single) panning finger, for computing pan delta. */
-const lastPos = ref({ x: 0, y: 0 });
-/** Last distance between the two fingers, for computing pinch delta. */
-let lastPinchDist = 0;
-
-function pinchDistance() {
-  const [a, b] = [...pointers.value.values()];
-  if (!a || !b) return 0;
-  return Math.hypot(b.x - a.x, b.y - a.y);
-}
-
-function clampScale(s: number) {
-  return Math.min(maxScale.value, Math.max(1, s));
-}
-
-/**
- * Convert a CSS-pixel drag delta into SOURCE-pixel offset units so the image
- * tracks the finger 1:1 on screen.
- *
- * The chain: a finger moves `dCss` CSS px. That maps to `dCss * dpr` device
- * px on the preview canvas. The preview canvas (device px) represents the
- * slot's OUTPUT pixel area, so that's `dCss * dpr * (slotOutW / canvasW)`
- * output px. drawSlot applies the offset as `offset * drawScale` to get output
- * px, so the source-pixel delta we need is `outputDelta / drawScale`.
- *
- * Simplifying (canvasW ≈ rect.width * dpr → dpr cancels):
- *   sourceDelta = dCss * (slotOutW / rect.width) / drawScale
- * where drawScale = coverScale * transform.scale.
- *
- * Earlier we multiplied by `scale` instead of dividing — that's why the image
- * raced the finger (factor ~3.6× at Solo, scale 1). The PAN_FRICTION constant
- * below lets us dial the feel below strict 1:1 if it still reads "twitchy".
- */
-const PAN_FRICTION = 0.85;
-
-function slotOutDims() {
-  const { w: outW, h: outH } = OUTPUT_DIMS[props.ratio];
-  return { slotOutW: props.slot.w * outW, slotOutH: props.slot.h * outH };
-}
-
-function cssToSourceDelta(dxCss: number, dyCss: number) {
-  const canvas = canvasRef.value;
-  if (!canvas || !props.source) return { x: 0, y: 0 };
-  const rect = canvas.getBoundingClientRect();
-  if (rect.width === 0 || rect.height === 0) return { x: 0, y: 0 };
-  const { slotOutW, slotOutH } = slotOutDims();
-  // drawScale in drawSlot = coverScale * transform.scale, where coverScale is
-  // how much the source is shrunk to just cover the slot (output/source).
-  const coverScale = Math.max(
-    slotOutW / props.source.width,
-    slotOutH / props.source.height,
-  );
-  const drawScale = coverScale * props.transform.scale;
-  const sx = (slotOutW / rect.width / drawScale) * PAN_FRICTION;
-  const sy = (slotOutH / rect.height / drawScale) * PAN_FRICTION;
-  return { x: dxCss * sx, y: dyCss * sy };
-}
-
-/**
- * Clamp pan offset so the image always fully COVERS the slot — no black edges.
- *
- * The image is drawn at drawW = srcW * drawScale into a slot of slotOutW.
- * Overflow on each side = (drawW - slotOutW) / 2. drawSlot applies offset as
- * `offset * drawScale`, so the max source-pixel offset is overflow / drawScale.
- *
- * At cover-fit (scale=1) on the constraining axis, drawW == slotOutW, so
- * maxOffset = 0 (can't pan — image exactly fills, correct). The OTHER axis
- * (where the source has extra pixels) allows panning within its overflow.
- */
-function clampOffset(t: SlotTransform): SlotTransform {
-  if (!props.source) return t;
-  const { slotOutW, slotOutH } = slotOutDims();
-  const coverScale = Math.max(
-    slotOutW / props.source.width,
-    slotOutH / props.source.height,
-  );
-  const drawScale = coverScale * t.scale;
-  const drawW = props.source.width * drawScale;
-  const drawH = props.source.height * drawScale;
-  const maxX = drawW > slotOutW ? (drawW - slotOutW) / (2 * drawScale) : 0;
-  const maxY = drawH > slotOutH ? (drawH - slotOutH) / (2 * drawScale) : 0;
-  return {
-    ...t,
-    offsetX: Math.max(-maxX, Math.min(maxX, t.offsetX)),
-    offsetY: Math.max(-maxY, Math.min(maxY, t.offsetY)),
-  };
-}
-
-function onPointerDown(e: PointerEvent) {
-  if (!props.source) return;
-  pointers.value.set(e.pointerId, { x: e.clientX, y: e.clientY });
-  if (pointers.value.size === 2) {
-    // Entering pinch mode: seed the baseline distance.
-    lastPinchDist = pinchDistance();
-  } else if (pointers.value.size === 1) {
-    lastPos.value = { x: e.clientX, y: e.clientY };
-  }
-  (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-}
-
-function onPointerMove(e: PointerEvent) {
-  if (!props.source) return;
-  if (!pointers.value.has(e.pointerId)) return;
-  pointers.value.set(e.pointerId, { x: e.clientX, y: e.clientY });
-
-  // Two fingers → pinch-to-zoom.
-  if (pointers.value.size >= 2) {
-    const dist = pinchDistance();
-    if (lastPinchDist > 0) {
-      // Scale factor = ratio of finger-distance change.
-      const factor = dist / lastPinchDist;
-      const newScale = clampScale(props.transform.scale * factor);
-      // Re-clamp offset: zooming out shrinks the pan range, so an offset that
-      // was valid at higher zoom might now expose an edge.
-      const clamped = clampOffset({ ...props.transform, scale: newScale });
-      emit("change", props.slot.index, clamped);
-    }
-    lastPinchDist = dist;
-    return;
-  }
-
-  // One finger → pan.
-  const dx = e.clientX - lastPos.value.x;
-  const dy = e.clientY - lastPos.value.y;
-  lastPos.value = { x: e.clientX, y: e.clientY };
-  const src = cssToSourceDelta(dx, dy);
-  // Clamp so the image always covers the slot (no black edges).
-  const clamped = clampOffset({
-    ...props.transform,
-    offsetX: props.transform.offsetX + src.x,
-    offsetY: props.transform.offsetY + src.y,
-  });
-  emit("change", props.slot.index, clamped);
-}
-
-function onPointerUp(e: PointerEvent) {
-  pointers.value.delete(e.pointerId);
-  (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
-  if (pointers.value.size < 2) lastPinchDist = 0;
-  if (pointers.value.size === 1) {
-    const [p] = [...pointers.value.values()];
-    if (p) lastPos.value = { x: p.x, y: p.y };
-  }
-}
-
-function onZoom(e: Event) {
-  const target = e.target as HTMLInputElement;
-  const pct = Number(target.value) / 100;
-  const scale = 1 + pct * (maxScale.value - 1);
-  // Re-clamp offset on zoom-out so the image still covers the slot.
-  emit("change", props.slot.index, clampOffset({ ...props.transform, scale }));
-}
-
 function onPick() {
   emit("pick", props.slot.index);
 }
 </script>
 
 <template>
-  <div
+  <button
+    type="button"
     class="relative h-full w-full overflow-hidden rounded-lg border-2 transition-colors"
     :class="active ? 'border-brand-500' : 'border-transparent'"
+    @click="onPick"
   >
-    <!-- Filled: canvas preview (WYSIWYG with baker), draggable to pan -->
+    <!-- Filled: WYSIWYG canvas preview (no editing here — tap opens the editor) -->
     <canvas
       v-if="source"
       ref="canvasRef"
-      class="absolute inset-0 h-full w-full cursor-grab touch-none active:cursor-grabbing"
-      @pointerdown="onPointerDown"
-      @pointermove="onPointerMove"
-      @pointerup="onPointerUp"
-      @pointercancel="onPointerUp"
+      class="absolute inset-0 h-full w-full"
+      aria-hidden="true"
     />
 
-    <!-- Empty: tap to pick -->
-    <button
+    <!-- Empty: "+" placeholder -->
+    <span
       v-else
-      type="button"
-      class="absolute inset-0 flex flex-col items-center justify-center gap-1 bg-neutral-800 text-neutral-400 hover:bg-neutral-700"
-      @click="onPick"
+      class="absolute inset-0 flex flex-col items-center justify-center gap-1 bg-neutral-800 text-neutral-400"
     >
       <span class="text-4xl leading-none">+</span>
-      <span class="text-xs">Add photo</span>
-    </button>
+      <span class="px-1 text-center text-[10px] leading-tight">Add photo</span>
+    </span>
 
-    <!-- Remove button (sibling, not child, of the drag surface) -->
-    <button
+    <!-- Remove chip (stops propagation so it doesn't also open the editor) -->
+    <span
       v-if="source"
-      class="absolute right-2 top-2 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-black/60 text-lg font-semibold text-white hover:bg-black/80"
-      type="button"
-      aria-label="Remove photo"
-      @click="emit('remove', slot.index)"
+      class="absolute right-1.5 top-1.5 z-10 flex h-7 w-7 items-center justify-center rounded-full bg-black/60 text-sm font-semibold text-white hover:bg-black/80"
+      @click.stop="emit('remove', slot.index)"
     >
       ✕
-    </button>
-
-    <!--
-      Zoom slider (sibling of drag surface; stops pointer propagation).
-      Kept as a fine-tune control alongside pinch-to-zoom. Track + thumb are
-      sized up so the thumb is a comfortable touch target on mobile.
-    -->
-    <div
-      v-if="source"
-      class="absolute inset-x-2 bottom-2 z-10 flex items-center gap-2 rounded bg-black/50 px-2 py-1.5"
-    >
-      <span class="text-[10px] tabular-nums text-neutral-300">−</span>
-      <input
-        type="range"
-        min="0"
-        max="100"
-        :value="zoomPct"
-        class="dc-zoom-slider h-6 flex-1"
-        @input="onZoom"
-        @pointerdown.stop
-      />
-      <span class="text-[10px] tabular-nums text-neutral-300">+</span>
-    </div>
-  </div>
+    </span>
+  </button>
 </template>

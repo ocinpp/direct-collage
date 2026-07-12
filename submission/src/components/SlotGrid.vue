@@ -15,7 +15,6 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   pick: [slotIndex: number];
-  change: [slotIndex: number, transform: SlotTransform];
   remove: [slotIndex: number];
 }>();
 
@@ -67,7 +66,6 @@ function slotStyle(s: { x: number; y: number; w: number; h: number }) {
         :ratio="ratio"
         :active="i === activeSlot"
         @pick="(idx) => emit('pick', idx)"
-        @change="(idx, t) => emit('change', idx, t)"
         @remove="(idx) => emit('remove', idx)"
       />
     </div>
