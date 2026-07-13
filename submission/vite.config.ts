@@ -4,6 +4,10 @@ import tailwindcss from "@tailwindcss/vite";
 import { fileURLToPath, URL } from "node:url";
 
 export default defineConfig({
+  // Base path for production builds. Dev runs at root (Vite handles this
+  // automatically); prod is served at /submit/ by the Express server so the
+  // three apps don't collide on the same origin.
+  base: process.env.NODE_ENV === "production" ? "/submit/" : "/",
   plugins: [vue(), tailwindcss()],
   resolve: {
     alias: {

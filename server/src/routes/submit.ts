@@ -1,4 +1,5 @@
 import { Router } from "express";
+import rateLimit from "express-rate-limit";
 import multer from "multer";
 import { prisma } from "../db.js";
 import { storage } from "../lib/storage-instance.js";
@@ -10,6 +11,24 @@ import type { TemplateVariant } from "@direct-collage/shared";
 import { TEMPLATES, ENABLED_TEMPLATES } from "@direct-collage/shared";
 
 export const submitRouter = Router();
+
+/**
+ * Rate limit on submissions (PRD §8.3). Runs BEFORE multer decodes the
+ * upload, so a flood of rejected requests never holds buffer memory. Scopes
+ * to this router only — auth/admin/health/walls are unaffected.
+ *
+ * trust proxy:1 is set in index.ts, so the real client IP is read from
+ * X-Forwarded-For when behind a reverse proxy.
+ */
+submitRouter.use(
+  rateLimit({
+    windowMs: env.rateLimitWindowMs,
+    max: env.rateLimitMax,
+    standardHeaders: true, // RateLimit-* headers (useful for debugging)
+    legacyHeaders: false,
+    message: { error: "Too many submissions, please wait a moment." },
+  }),
+);
 
 // In-memory multer (we validate before persisting; buffer is small, ≤3MB).
 const upload = multer({

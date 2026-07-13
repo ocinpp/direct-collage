@@ -137,3 +137,52 @@ The dev servers bind to `0.0.0.0`, so you can access them from a phone on the sa
 - **SSE, not Socket.io** — the wall only receives pushes (one-way), so SSE is simpler and lighter. `EventSource` auto-reconnects natively and handles cross-origin for the embeddable widget.
 - **Client-side baking** — the browser merges all arranged photos into a single composite JPEG via Canvas. The server validates (never trusts) the result with sharp: MIME, decodability, dimensions, aspect ratio, file size.
 - **No original photo storage** — protects privacy and reduces storage cost. Only the final composite is uploaded.
+
+## Production
+
+The simplest production deploy is **same-origin**: the Express server serves the API + all three built frontends from a single port.
+
+```bash
+npm run build                    # builds shared → server → submission → admin → wall
+node server/dist/index.js        # serves everything on :4000
+```
+
+| App         | URL                       |
+| ----------- | ------------------------- |
+| API         | `http://<host>:4000/api`  |
+| Submission  | `http://<host>:4000/submit/demo` |
+| Admin       | `http://<host>:4000/admin-ui/login` |
+| Wall        | `http://<host>:4000/wall-ui/demo` |
+
+The built frontends use `VITE_API_URL=""` (same-origin), so no additional env config is needed when served this way.
+
+### Split-origin deploy (optional)
+
+If you want to serve the frontends from a different host/CDN, set `VITE_API_URL` at **build time** (via a `.env.production` file in each app, or inline):
+
+```env
+# e.g. submission/.env.production
+VITE_API_URL=https://api.your-domain.com
+```
+
+Then rebuild — the apps will call the API at that origin. The server's `CORS_ORIGIN` env must include the frontend origin(s).
+
+### Environment variables (`server/.env`)
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `PORT` | `4000` | Server port |
+| `PUBLIC_BASE_URL` | `http://localhost:4000` | Base URL for composite image URLs (set to LAN IP for phone testing, or your domain in prod) |
+| `JWT_SECRET` | `dev-only-change-me` | **Change in production** — signs admin session tokens |
+| `CORS_ORIGIN` | `localhost:5173,5174,5175` | Comma-separated allowlist of frontend origins |
+| `RATE_LIMIT_WINDOW_MS` | `60000` | Rate-limit window for submissions |
+| `RATE_LIMIT_MAX` | `20` | Max submissions per IP per window |
+| `MAX_UPLOAD_BYTES` | `3145728` | Max composite file size (3MB) |
+
+## Security
+
+- **Rate limiting** on `POST /api/submit/:wallSlug` — 20 requests/minute/IP (configurable). Runs before multer decodes the upload, so floods don't hold buffer memory.
+- **CORS allowlist** — only origins in `CORS_ORIGIN` get `Access-Control-Allow-Origin` with credentials. Non-browser / same-origin requests (no `Origin` header) are allowed.
+- **Server-side payload validation** — sharp re-checks every submitted composite: MIME type, decodability, dimensions, aspect ratio, file size. The client's claims are never trusted.
+- **JWT in httpOnly cookie** — admin sessions are not accessible to JavaScript; `SameSite=Lax` provides CSRF protection.
+- **No original photo storage** — only the baked composite JPEG is stored; source photos never leave the user's browser.

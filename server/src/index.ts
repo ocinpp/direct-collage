@@ -1,6 +1,9 @@
 import express from "express";
 import cookieParser from "cookie-parser";
 import cors from "cors";
+import { existsSync } from "node:fs";
+import { resolve, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
 import { env } from "./env.js";
 import { prisma, enableWal } from "./db.js";
 import { requireAdmin } from "./middleware/auth.js";
@@ -25,8 +28,19 @@ async function main() {
 
   app.use(
     cors({
-      // Frontend origins (submission / admin / wall dev servers + embed hosts).
-      origin: true, // reflect Origin — fine for credentialed requests in dev
+      // Allowlist of frontend origins (submission / admin / wall + embeds).
+      // With credentials:true, we must echo the specific origin (not *), so
+      // this function gates which origins can call the API with cookies.
+      // The list comes from the CORS_ORIGIN env var (comma-separated).
+      origin: (origin, cb) => {
+        // Allow same-origin / no-Origin requests (curl, server-to-server, the
+        // Vite dev proxy which makes same-origin calls). Browsers always send
+        // Origin on cross-origin requests; if absent, it's not a browser CORS
+        // request, so allow it.
+        if (!origin) return cb(null, true);
+        if (env.corsOrigins.includes(origin)) return cb(null, true);
+        return cb(null, false); // reject — no ACAO header sent
+      },
       credentials: true, // admin JWT cookie
     }),
   );
@@ -55,6 +69,35 @@ async function main() {
   app.use("/api", (_req, res) => {
     res.status(404).json({ error: "Not found" });
   });
+
+  // --- Production: serve the built frontend bundles (same-origin strategy) ---
+  // In dev the Vite proxy handles /api + /uploads. In production there's no
+  // proxy, so the simplest path is to serve all three frontends from this
+  // server on :4000. Then VITE_API_URL="" (same-origin) works and no separate
+  // static host is needed. Each app is mounted at a sub-path with a matching
+  // Vite `base` so asset URLs resolve correctly.
+  //
+  // This is a no-op in dev — the dist/ dirs don't exist unless `npm run build`
+  // has been run.
+  // serverRoot = the monorepo root (repo/), since this runs from server/dist/.
+  // Frontend dist dirs are at repo/submission/dist, repo/admin/dist, etc.
+  const serverRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
+  const frontends: Array<{ dir: string; route: string; label: string }> = [
+    { dir: resolve(serverRoot, "submission/dist"), route: "/submit", label: "submission" },
+    { dir: resolve(serverRoot, "admin/dist"), route: "/admin-ui", label: "admin" },
+    { dir: resolve(serverRoot, "wall/dist"), route: "/wall-ui", label: "wall" },
+  ];
+  for (const fe of frontends) {
+    if (!existsSync(fe.dir)) continue;
+    // Serve static assets from the dist dir.
+    app.use(fe.route, express.static(fe.dir));
+    // SPA fallback: any non-asset GET under the route returns index.html, so
+    // client-side routing (e.g. /submit/demo, /wall-ui/demo) survives refresh.
+    app.get(`${fe.route}/*`, (_req, res) => {
+      res.sendFile(resolve(fe.dir, "index.html"));
+    });
+    console.log(`  ${fe.label.padEnd(10)} : http://localhost:${env.port}${fe.route}`);
+  }
 
   // --- Central error handler ---
   app.use(

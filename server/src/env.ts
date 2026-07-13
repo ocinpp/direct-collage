@@ -21,6 +21,28 @@ export const env = {
   seedAdminPassword: required("SEED_ADMIN_PASSWORD", "changeme"),
   maxUploadBytes: Number(process.env.MAX_UPLOAD_BYTES ?? 3 * 1024 * 1024),
   /**
+   * Rate limiting on the submit endpoint (PRD §8.3).
+   * Defaults: 20 submissions per 60s window per IP — generous enough for an
+   * event crowd with retries, tight enough to stop flooding.
+   */
+  rateLimitWindowMs: Number(process.env.RATE_LIMIT_WINDOW_MS ?? 60_000),
+  rateLimitMax: Number(process.env.RATE_LIMIT_MAX ?? 20),
+  /**
+   * CORS allowlist (comma-separated origins). With credentials:true the CORS
+   * middleware echoes the specific origin back (not *), so this list controls
+   * exactly which frontend origins can call the API with cookies.
+   *
+   * Default covers the three dev servers. For LAN/phone testing, append the
+   * LAN-IP variants (e.g. http://192.168.x.x:5173). For production, set the
+   * real domain(s).
+   */
+  corsOrigins: required(
+    "CORS_ORIGIN",
+    "http://localhost:5173,http://localhost:5174,http://localhost:5175",
+  ).split(",")
+    .map((s) => s.trim())
+    .filter(Boolean),
+  /**
    * Per-aspect-ratio validation bounds.
    * Width is fixed at 1080 for all ratios; height follows the ratio.
    * A tolerance band lets the client's baked JPEG differ slightly without
