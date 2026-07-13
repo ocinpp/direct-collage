@@ -93,6 +93,15 @@ async function onFileChosen(e: Event) {
   }
 }
 
+/**
+ * Handle file-picker cancel. Some browsers (notably iOS Safari) don't fire
+ * `change` at all when the user dismisses the picker, leaving `preparing`
+ * stuck on. The `cancel` event covers that case.
+ */
+function onFilePickerCancel() {
+  preparing.value = null;
+}
+
 function onEditorChange(t: SlotTransform) {
   if (editingSlot.value !== null) store.setTransform(editingSlot.value, t);
 }
@@ -129,13 +138,19 @@ const showEditor = computed(() => editingSlot.value !== null && template.value !
     actual visible viewport as the URL bar shows/hides.
   -->
   <div class="mx-auto flex min-h-dvh max-w-md flex-col px-5 py-6">
-    <!-- Hidden file input; re-used for whichever slot is active -->
+    <!--
+      Hidden file input; re-used for whichever slot is active.
+      The `cancel` event fires when the user dismisses the file picker without
+      choosing anything (iOS Safari + some Android browsers don't always fire
+      `change` on cancel, so without this the "Processing photo…" state sticks).
+    -->
     <input
       ref="fileInput"
       type="file"
       accept="image/jpeg,image/png"
       class="hidden"
       @change="onFileChosen"
+      @cancel="onFilePickerCancel"
     />
 
     <!-- Header: bold display type, the marquee voice -->
