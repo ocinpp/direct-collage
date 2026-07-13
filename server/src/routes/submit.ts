@@ -17,8 +17,13 @@ const upload = multer({
   limits: { fileSize: env.maxUploadBytes },
   fileFilter: (_req, file, cb) => {
     // Loose MIME check; sharp re-verifies the actual decoded format.
-    if (file.mimetype === "image/jpeg") cb(null, true);
-    else cb(new multer.MulterError("LIMIT_UNEXPECTED_FILE", file.fieldname));
+    // Accept both JPEG MIME variants — the client always bakes to JPEG, so
+    // WebP/PNG/etc source photos arrive here already converted.
+    if (file.mimetype === "image/jpeg" || file.mimetype === "image/jpg") {
+      cb(null, true);
+    } else {
+      cb(new multer.MulterError("LIMIT_UNEXPECTED_FILE", file.fieldname));
+    }
   },
 });
 

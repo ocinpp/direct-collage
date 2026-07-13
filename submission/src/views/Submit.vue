@@ -147,7 +147,7 @@ const showEditor = computed(() => editingSlot.value !== null && template.value !
     <input
       ref="fileInput"
       type="file"
-      accept="image/jpeg,image/png"
+      accept="image/jpeg,image/png,image/webp"
       class="hidden"
       @change="onFileChosen"
       @cancel="onFilePickerCancel"
