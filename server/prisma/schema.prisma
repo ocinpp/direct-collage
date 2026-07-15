@@ -30,6 +30,10 @@ model Wall {
   aspectRatio String       @default("1:1")
   bgColor     String?
   headerLogo  String?
+  // Wall auto-scroll speed in px/sec (null = use default ~30).
+  scrollSpeed Int?
+  // How composites are displayed (scrolling-grid | fullscreen-showcase | rotating-hero-bento | scattered-polaroids)
+  displayMode String @default("scrolling-grid")
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
   composites  Composite[]

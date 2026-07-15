@@ -26,6 +26,10 @@ const patchSchema = z.object({
   aspectRatio: z.enum(["1:1", "4:5", "9:16"]).optional(),
   bgColor: z.string().nullable().optional(),
   headerLogo: z.string().nullable().optional(),
+  scrollSpeed: z.number().int().min(0).max(300).nullable().optional(),
+  displayMode: z
+    .enum(["scrolling-grid", "fullscreen-showcase", "rotating-hero-bento", "scattered-polaroids"])
+    .optional(),
 });
 
 adminWallsRouter.get(
@@ -76,6 +80,8 @@ adminWallsRouter.patch(
         ...(body.aspectRatio !== undefined && { aspectRatio: body.aspectRatio as AspectRatio }),
         ...(body.bgColor !== undefined && { bgColor: body.bgColor }),
         ...(body.headerLogo !== undefined && { headerLogo: body.headerLogo }),
+        ...(body.scrollSpeed !== undefined && { scrollSpeed: body.scrollSpeed }),
+        ...(body.displayMode !== undefined && { displayMode: body.displayMode }),
       },
     });
     res.json(toWallDTO(wall));

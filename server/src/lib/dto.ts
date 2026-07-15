@@ -5,6 +5,7 @@ import type {
   WallPublicDTO,
   CompositeStatus,
   AspectRatio,
+  DisplayMode,
   TemplateVariant,
 } from "@direct-collage/shared";
 import { storage } from "./storage-instance.js";
@@ -20,6 +21,8 @@ export function toWallDTO(w: PrismaWall): WallPublicDTO {
     aspectRatio: w.aspectRatio as AspectRatio,
     bgColor: w.bgColor,
     headerLogo: w.headerLogo,
+    scrollSpeed: w.scrollSpeed,
+    displayMode: w.displayMode as DisplayMode,
   };
 }
 

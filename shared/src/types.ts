@@ -9,6 +9,24 @@ export type AspectRatio = "1:1" | "4:5" | "9:16";
 /** Wall lifecycle status. */
 export type WallStatus = "ACTIVE" | "PAUSED";
 
+/**
+ * Wall display mode — how approved composites are rendered on the media wall.
+ * Admin-configurable per wall (PRD §6.3.4 / display modes extension).
+ */
+export type DisplayMode =
+  | "scrolling-grid"
+  | "fullscreen-showcase"
+  | "rotating-hero-bento"
+  | "scattered-polaroids";
+
+/** Human-readable labels for each display mode (for admin selectors). */
+export const DISPLAY_MODE_LABELS: Record<DisplayMode, string> = {
+  "scrolling-grid": "Scrolling Grid",
+  "fullscreen-showcase": "Fullscreen Showcase",
+  "rotating-hero-bento": "Rotating Hero Bento",
+  "scattered-polaroids": "Scattered Polaroids",
+};
+
 /** Composite moderation status. */
 export type CompositeStatus = "PENDING" | "APPROVED" | "REJECTED";
 
@@ -78,6 +96,10 @@ export interface WallPublicDTO {
   aspectRatio: AspectRatio;
   bgColor: string | null;
   headerLogo: string | null;
+  /** Auto-scroll speed in px/sec (null = default). */
+  scrollSpeed: number | null;
+  /** How approved composites are displayed on the media wall. */
+  displayMode: DisplayMode;
 }
 
 /** Composite as returned to the wall feed / SSE event. */

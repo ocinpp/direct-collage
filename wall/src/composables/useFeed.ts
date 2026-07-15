@@ -42,11 +42,38 @@ export function useFeed() {
       wall.value = wallRes;
       composites.value = feedRes;
 
+      // Track the slug so the hello-handler can re-fetch the right wall after
+      // a reconnect (closures can't access it reliably otherwise).
+      const currentSlug = slug;
+
       // Open SSE for live updates.
       eventSource = new EventSource(`${BASE}/api/walls/${encodeURIComponent(slug)}/stream`);
 
-      eventSource.addEventListener(SSE_EVENTS.HELLO, () => {
+      // On connect/reconnect: re-fetch the feed to recover any approvals that
+      // were emitted while we were disconnected (EventSource has no resume/
+      // lastEventId). Dedupe against existing composites so nothing doubles.
+      eventSource.addEventListener(SSE_EVENTS.HELLO, async () => {
         connected.value = true;
+        try {
+          const res = await fetch(
+            `${BASE}/api/walls/${encodeURIComponent(currentSlug)}/feed`,
+          );
+          if (res.ok) {
+            const fresh = (await res.json()) as CompositePublicDTO[];
+            const existingIds = new Set(composites.value.map((c) => c.id));
+            const newOnes = fresh.filter((c) => !existingIds.has(c.id));
+            if (newOnes.length > 0) {
+              // Merge: newest-first, deduped.
+              const merged = [...newOnes, ...composites.value];
+              const seen = new Set<string>();
+              composites.value = merged.filter((c) =>
+                seen.has(c.id) ? false : (seen.add(c.id), true),
+              );
+            }
+          }
+        } catch {
+          // Non-fatal — the SSE push path still works for live updates.
+        }
       });
 
       eventSource.addEventListener(SSE_EVENTS.COMPOSITE_APPROVED, (e) => {
@@ -57,6 +84,7 @@ export function useFeed() {
 
       eventSource.onerror = () => {
         // EventSource auto-reconnects natively; just update the indicator.
+        // On reconnect, the hello handler above re-fetches the feed.
         connected.value = false;
       };
     } catch (e) {

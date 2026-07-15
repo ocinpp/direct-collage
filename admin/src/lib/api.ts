@@ -49,7 +49,15 @@ export const api = {
     get(id: string) {
       return request<WallPublicDTO>(`/api/admin/walls/${id}`);
     },
-    patch(id: string, body: Partial<Pick<WallPublicDTO, "title" | "name">>) {
+    patch(
+      id: string,
+      body: Partial<
+        Pick<
+          WallPublicDTO,
+          "title" | "name" | "bgColor" | "headerLogo" | "scrollSpeed" | "displayMode"
+        >
+      >,
+    ) {
       return request<WallPublicDTO>(`/api/admin/walls/${id}`, {
         method: "PATCH",
         body: JSON.stringify(body),

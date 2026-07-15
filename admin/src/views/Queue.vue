@@ -5,7 +5,8 @@ import { storeToRefs } from "pinia";
 import { useAuthStore } from "../stores/auth.js";
 import { useQueueStore } from "../stores/queue.js";
 import { api } from "../lib/api.js";
-import type { WallPublicDTO } from "@direct-collage/shared";
+import type { DisplayMode, WallAnalyticsDTO, WallPublicDTO } from "@direct-collage/shared";
+import { DISPLAY_MODE_LABELS } from "@direct-collage/shared";
 import CompositeCard from "../components/CompositeCard.vue";
 
 const route = useRoute();
@@ -46,6 +47,56 @@ async function saveTitle() {
 
 const wallParam = computed(() => route.params.id as string);
 
+// --- Branding editor (bgColor, headerLogo, scrollSpeed) ---
+const editingBranding = ref(false);
+const savingBranding = ref(false);
+const brandingError = ref<string | null>(null);
+const bgColorDraft = ref("#000000");
+const headerLogoDraft = ref("");
+const scrollSpeedDraft = ref(30);
+const displayModeDraft = ref<DisplayMode>("scrolling-grid");
+
+// --- Analytics ---
+const analytics = ref<WallAnalyticsDTO | null>(null);
+let analyticsTimer: ReturnType<typeof setInterval> | null = null;
+
+async function loadAnalytics(wallId: string) {
+  try {
+    analytics.value = await api.analytics.get(wallId);
+  } catch {
+    // Non-fatal — analytics are supplementary
+  }
+}
+
+function startEditBranding() {
+  bgColorDraft.value = wall.value?.bgColor ?? "#000000";
+  headerLogoDraft.value = wall.value?.headerLogo ?? "";
+  scrollSpeedDraft.value = wall.value?.scrollSpeed ?? 30;
+  displayModeDraft.value = wall.value?.displayMode ?? "scrolling-grid";
+  editingBranding.value = true;
+  brandingError.value = null;
+}
+
+async function saveBranding() {
+  if (!wall.value) return;
+  savingBranding.value = true;
+  brandingError.value = null;
+  try {
+    const updated = await api.walls.patch(wall.value.id, {
+      bgColor: bgColorDraft.value || null,
+      headerLogo: headerLogoDraft.value.trim() || null,
+      scrollSpeed: scrollSpeedDraft.value,
+      displayMode: displayModeDraft.value,
+    });
+    wall.value = updated;
+    editingBranding.value = false;
+  } catch (e) {
+    brandingError.value = e instanceof Error ? e.message : "Failed to save";
+  } finally {
+    savingBranding.value = false;
+  }
+}
+
 /** Poll the queue while the tab is open so newly-submitted composites appear. */
 let pollTimer: ReturnType<typeof setInterval> | null = null;
 
@@ -64,6 +115,8 @@ onMounted(async () => {
     wall.value = found;
     await queueStore.load(found.id);
     pollTimer = setInterval(() => queueStore.load(found.id), 5000);
+    await loadAnalytics(found.id);
+    analyticsTimer = setInterval(() => loadAnalytics(found.id), 10000);
   } catch (e) {
     wallLoadingError.value = e instanceof Error ? e.message : "Failed to load wall";
   }
@@ -72,6 +125,8 @@ onMounted(async () => {
 function stopPolling() {
   if (pollTimer) clearInterval(pollTimer);
   pollTimer = null;
+  if (analyticsTimer) clearInterval(analyticsTimer);
+  analyticsTimer = null;
 }
 // Cleanup on unmount.
 onUnmounted(stopPolling);
@@ -158,6 +213,123 @@ async function onLogout() {
         </button>
       </div>
       <p v-if="titleError" class="mt-2 text-sm text-rose-600">{{ titleError }}</p>
+    </section>
+
+    <!-- Branding editor (bg color, logo, scroll speed) -->
+    <section v-if="wall" class="mb-4 rounded-xl border border-neutral-200 bg-white p-4">
+      <div class="flex items-center justify-between gap-3">
+        <p class="text-xs font-medium uppercase tracking-wide text-neutral-500">
+          Wall appearance
+        </p>
+        <button
+          v-if="!editingBranding"
+          type="button"
+          class="shrink-0 rounded-lg border border-neutral-300 px-3 py-1.5 text-sm hover:bg-neutral-50"
+          @click="startEditBranding"
+        >
+          Edit
+        </button>
+      </div>
+
+      <div v-if="!editingBranding" class="mt-2 flex flex-wrap items-center gap-4 text-sm text-neutral-700">
+        <span class="flex items-center gap-1.5">
+          <span
+            class="inline-block h-4 w-4 rounded border border-neutral-300"
+            :style="{ backgroundColor: wall.bgColor ?? '#000000' }"
+          />
+          {{ wall.bgColor ?? "default (black)" }}
+        </span>
+        <span v-if="wall.headerLogo" class="truncate">Logo: {{ wall.headerLogo }}</span>
+        <span v-else>No logo</span>
+        <span>Speed: {{ wall.scrollSpeed ?? 30 }}px/s</span>
+        <span>Mode: {{ wall.displayMode ? DISPLAY_MODE_LABELS[wall.displayMode] : "Scrolling Grid" }}</span>
+      </div>
+
+      <div v-if="editingBranding" class="mt-3 space-y-3">
+        <label class="flex items-center justify-between gap-3">
+          <span class="text-sm font-medium text-neutral-700">Background color</span>
+          <input
+            v-model="bgColorDraft"
+            type="color"
+            class="h-8 w-12 cursor-pointer rounded border border-neutral-300"
+          />
+        </label>
+        <label class="block">
+          <span class="text-sm font-medium text-neutral-700">Header logo URL</span>
+          <input
+            v-model="headerLogoDraft"
+            type="url"
+            placeholder="https://example.com/logo.png"
+            class="mt-1 w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none"
+          />
+        </label>
+        <label class="block">
+          <span class="text-sm font-medium text-neutral-700">
+            Scroll speed: {{ scrollSpeedDraft }}px/s
+          </span>
+          <input
+            v-model.number="scrollSpeedDraft"
+            type="range"
+            min="0"
+            max="120"
+            step="5"
+            class="mt-2 h-2 w-full accent-brand-500"
+          />
+          <div class="flex justify-between text-xs text-neutral-400">
+            <span>Paused (0)</span>
+            <span>Fast (120)</span>
+          </div>
+        </label>
+        <label class="block">
+          <span class="text-sm font-medium text-neutral-700">Display mode</span>
+          <select
+            v-model="displayModeDraft"
+            class="mt-1 w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none"
+          >
+            <option v-for="(label, key) in DISPLAY_MODE_LABELS" :key="key" :value="key">
+              {{ label }}
+            </option>
+          </select>
+        </label>
+        <div class="flex items-center gap-2">
+          <button
+            type="button"
+            class="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+            :disabled="savingBranding"
+            @click="saveBranding"
+          >
+            {{ savingBranding ? "Saving…" : "Save" }}
+          </button>
+          <button
+            type="button"
+            class="rounded-lg border border-neutral-300 px-4 py-2 text-sm hover:bg-neutral-50"
+            @click="editingBranding = false"
+          >
+            Cancel
+          </button>
+        </div>
+        <p v-if="brandingError" class="text-sm text-rose-600">{{ brandingError }}</p>
+      </div>
+    </section>
+
+    <!-- Analytics panel -->
+    <section v-if="analytics" class="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div class="rounded-xl border border-neutral-200 bg-white p-3 text-center">
+        <p class="font-mono text-2xl font-bold text-neutral-900">{{ analytics.total }}</p>
+        <p class="text-xs uppercase tracking-wide text-neutral-500">Total</p>
+      </div>
+      <div class="rounded-xl border border-neutral-200 bg-white p-3 text-center">
+        <p class="font-mono text-2xl font-bold text-emerald-600">{{ analytics.approved }}</p>
+        <p class="text-xs uppercase tracking-wide text-neutral-500">Approved</p>
+      </div>
+      <div class="rounded-xl border border-neutral-200 bg-white p-3 text-center">
+        <p class="font-mono text-2xl font-bold text-rose-600">{{ analytics.rejected }}</p>
+        <p class="text-xs uppercase tracking-wide text-neutral-500">Rejected</p>
+      </div>
+      <div class="rounded-xl border border-neutral-200 bg-white p-3 text-center">
+        <p class="font-mono text-2xl font-bold text-amber-600">{{ analytics.pending }}</p>
+        <p class="text-xs uppercase tracking-wide text-neutral-500">Pending</p>
+      </div>
     </section>
 
     <!-- Errors -->

@@ -10,3 +10,51 @@ body,
 body {
   overscroll-behavior: none;
 }
+
+/* ── FLIP transition for new photos entering the grid ──────────
+ * When a photo is prepended, Vue's TransitionGroup records old positions
+ * and animates items to their new grid slots (the "move" class). The new
+ * cell enters with a scale+fade; existing cells glide down.
+ */
+
+/* Existing cells glide to their new positions (the FLIP "move") */
+.cell-move {
+  transition: transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+/* New cell enters: scale up from 0.8 + fade in */
+.cell-enter-active {
+  transition:
+    opacity 0.4s ease-out,
+    transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.cell-enter-from {
+  opacity: 0;
+  transform: scale(0.8);
+}
+
+/* Removed cells fade out (shouldn't happen on the wall, but for completeness) */
+.cell-leave-active {
+  transition: opacity 0.3s ease;
+  position: absolute;
+}
+.cell-leave-to {
+  opacity: 0;
+}
+
+/* ── Entry highlight pulse on new cells ─────────────────────────
+ * A brief brand-colored box-shadow ring that fades over ~1.5s, drawing the
+ * eye to the newly-arrived photo. Applied via the cell-enter-active class
+ * which Vue adds during the enter transition.
+ */
+@keyframes dc-highlight-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(236, 72, 153, 0.8);
+  }
+  100% {
+    box-shadow: 0 0 0 8px rgba(236, 72, 153, 0);
+  }
+}
+.cell-enter-active > * {
+  animation: dc-highlight-pulse 1.5s ease-out 0.3s both;
+}
