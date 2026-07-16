@@ -6,6 +6,7 @@ import ScrollingGrid from "../components/ScrollingGrid.vue";
 import FullscreenShowcase from "../components/FullscreenShowcase.vue";
 import RotatingHeroBento from "../components/RotatingHeroBento.vue";
 import ScatteredPolaroids from "../components/ScatteredPolaroids.vue";
+import FlipCardWave from "../components/FlipCardWave.vue";
 
 const route = useRoute();
 const { wall, composites, loading, error, connected, load, disconnect } = useFeed();
@@ -21,6 +22,8 @@ const modeComponent = computed<Component>(() => {
       return RotatingHeroBento;
     case "scattered-polaroids":
       return ScatteredPolaroids;
+    case "flip-card-wave":
+      return FlipCardWave;
     default:
       return ScrollingGrid;
   }

@@ -17,7 +17,8 @@ export type DisplayMode =
   | "scrolling-grid"
   | "fullscreen-showcase"
   | "rotating-hero-bento"
-  | "scattered-polaroids";
+  | "scattered-polaroids"
+  | "flip-card-wave";
 
 /** Human-readable labels for each display mode (for admin selectors). */
 export const DISPLAY_MODE_LABELS: Record<DisplayMode, string> = {
@@ -25,6 +26,7 @@ export const DISPLAY_MODE_LABELS: Record<DisplayMode, string> = {
   "fullscreen-showcase": "Fullscreen Showcase",
   "rotating-hero-bento": "Rotating Hero Bento",
   "scattered-polaroids": "Scattered Polaroids",
+  "flip-card-wave": "Flip Card Wave",
 };
 
 /** Composite moderation status. */

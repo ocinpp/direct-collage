@@ -28,7 +28,13 @@ const patchSchema = z.object({
   headerLogo: z.string().nullable().optional(),
   scrollSpeed: z.number().int().min(0).max(300).nullable().optional(),
   displayMode: z
-    .enum(["scrolling-grid", "fullscreen-showcase", "rotating-hero-bento", "scattered-polaroids"])
+    .enum([
+      "scrolling-grid",
+      "fullscreen-showcase",
+      "rotating-hero-bento",
+      "scattered-polaroids",
+      "flip-card-wave",
+    ])
     .optional(),
 });
 
