@@ -8,10 +8,13 @@ const BASE = import.meta.env.VITE_API_URL ?? "";
  * Load a wall: fetch its config, then its approved composites (newest-first),
  * then open an SSE stream for real-time pushes.
  *
- * On `composite:approved`, the new photo is PREPENDED to the feed (newest at
- * top). Phase 1 keeps this simple — no auto-scroll, no FLIP reflow yet; those
- * are Phase 3 polish per the implementation plan.
+ * FIFO CAP: the composites array is capped at `maxPhotos` (default 100). When
+ * a new photo arrives and the array is at capacity, the oldest (last index)
+ * is dropped. All wall modes inherit this eviction automatically — the array
+ * they receive is always ≤ maxPhotos items.
  */
+const DEFAULT_MAX_PHOTOS = 100;
+
 export function useFeed() {
   const wall = ref<WallPublicDTO | null>(null);
   /** shallowRef: large arrays of image URLs shouldn't be deeply reactive. */
@@ -21,6 +24,22 @@ export function useFeed() {
   const connected = ref(false);
 
   let eventSource: EventSource | null = null;
+
+  /** Current max photos cap (from wall config, default 100). */
+  function maxPhotos(): number {
+    return wall.value?.maxPhotos ?? DEFAULT_MAX_PHOTOS;
+  }
+
+  /**
+   * Cap the array to maxPhotos (FIFO eviction). Newest items are at the
+   * front (index 0); when over capacity, drop from the end (oldest).
+   * Returns a new array (shallowRef requires identity change for reactivity).
+   */
+  function cap(items: CompositePublicDTO[]): CompositePublicDTO[] {
+    const limit = maxPhotos();
+    if (items.length <= limit) return items;
+    return items.slice(0, limit);
+  }
 
   async function load(slug: string) {
     loading.value = true;
@@ -40,18 +59,15 @@ export function useFeed() {
       ]);
 
       wall.value = wallRes;
-      composites.value = feedRes;
+      composites.value = cap(feedRes);
 
-      // Track the slug so the hello-handler can re-fetch the right wall after
-      // a reconnect (closures can't access it reliably otherwise).
       const currentSlug = slug;
 
       // Open SSE for live updates.
       eventSource = new EventSource(`${BASE}/api/walls/${encodeURIComponent(slug)}/stream`);
 
       // On connect/reconnect: re-fetch the feed to recover any approvals that
-      // were emitted while we were disconnected (EventSource has no resume/
-      // lastEventId). Dedupe against existing composites so nothing doubles.
+      // were emitted while we were disconnected. Dedupe + cap.
       eventSource.addEventListener(SSE_EVENTS.HELLO, async () => {
         connected.value = true;
         try {
@@ -63,12 +79,12 @@ export function useFeed() {
             const existingIds = new Set(composites.value.map((c) => c.id));
             const newOnes = fresh.filter((c) => !existingIds.has(c.id));
             if (newOnes.length > 0) {
-              // Merge: newest-first, deduped.
               const merged = [...newOnes, ...composites.value];
               const seen = new Set<string>();
-              composites.value = merged.filter((c) =>
+              const deduped = merged.filter((c) =>
                 seen.has(c.id) ? false : (seen.add(c.id), true),
               );
+              composites.value = cap(deduped);
             }
           }
         } catch {
@@ -78,13 +94,12 @@ export function useFeed() {
 
       eventSource.addEventListener(SSE_EVENTS.COMPOSITE_APPROVED, (e) => {
         const c = JSON.parse((e as MessageEvent).data) as CompositePublicDTO;
-        // Prepend (newest-first). Dedupe by id in case of a replay.
-        composites.value = [c, ...composites.value.filter((x) => x.id !== c.id)];
+        // Prepend (newest-first). Dedupe by id, then cap (evict oldest).
+        const updated = [c, ...composites.value.filter((x) => x.id !== c.id)];
+        composites.value = cap(updated);
       });
 
       eventSource.onerror = () => {
-        // EventSource auto-reconnects natively; just update the indicator.
-        // On reconnect, the hello handler above re-fetches the feed.
         connected.value = false;
       };
     } catch (e) {

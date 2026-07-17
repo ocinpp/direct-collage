@@ -22,6 +22,7 @@ export function toWallDTO(w: PrismaWall): WallPublicDTO {
     bgColor: w.bgColor,
     headerLogo: w.headerLogo,
     scrollSpeed: w.scrollSpeed,
+    maxPhotos: w.maxPhotos,
     displayMode: w.displayMode as DisplayMode,
   };
 }

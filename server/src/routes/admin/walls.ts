@@ -27,6 +27,7 @@ const patchSchema = z.object({
   bgColor: z.string().nullable().optional(),
   headerLogo: z.string().nullable().optional(),
   scrollSpeed: z.number().int().min(0).max(300).nullable().optional(),
+  maxPhotos: z.number().int().min(10).max(1000).nullable().optional(),
   displayMode: z
     .enum([
       "scrolling-grid",
@@ -87,6 +88,7 @@ adminWallsRouter.patch(
         ...(body.bgColor !== undefined && { bgColor: body.bgColor }),
         ...(body.headerLogo !== undefined && { headerLogo: body.headerLogo }),
         ...(body.scrollSpeed !== undefined && { scrollSpeed: body.scrollSpeed }),
+        ...(body.maxPhotos !== undefined && { maxPhotos: body.maxPhotos }),
         ...(body.displayMode !== undefined && { displayMode: body.displayMode }),
       },
     });

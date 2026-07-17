@@ -55,6 +55,7 @@ const bgColorDraft = ref("#000000");
 const headerLogoDraft = ref("");
 const scrollSpeedDraft = ref(30);
 const displayModeDraft = ref<DisplayMode>("scrolling-grid");
+const maxPhotosDraft = ref(100);
 
 // --- Analytics ---
 const analytics = ref<WallAnalyticsDTO | null>(null);
@@ -73,6 +74,7 @@ function startEditBranding() {
   headerLogoDraft.value = wall.value?.headerLogo ?? "";
   scrollSpeedDraft.value = wall.value?.scrollSpeed ?? 30;
   displayModeDraft.value = wall.value?.displayMode ?? "scrolling-grid";
+  maxPhotosDraft.value = wall.value?.maxPhotos ?? 100;
   editingBranding.value = true;
   brandingError.value = null;
 }
@@ -87,6 +89,7 @@ async function saveBranding() {
       headerLogo: headerLogoDraft.value.trim() || null,
       scrollSpeed: scrollSpeedDraft.value,
       displayMode: displayModeDraft.value,
+      maxPhotos: maxPhotosDraft.value,
     });
     wall.value = updated;
     editingBranding.value = false;
@@ -242,6 +245,7 @@ async function onLogout() {
         <span v-if="wall.headerLogo" class="truncate">Logo: {{ wall.headerLogo }}</span>
         <span v-else>No logo</span>
         <span>Speed: {{ wall.scrollSpeed ?? 30 }}px/s</span>
+        <span>Max: {{ wall.maxPhotos ?? 100 }} photos</span>
         <span>Mode: {{ wall.displayMode ? DISPLAY_MODE_LABELS[wall.displayMode] : "Scrolling Grid" }}</span>
       </div>
 
@@ -290,6 +294,18 @@ async function onLogout() {
               {{ label }}
             </option>
           </select>
+        </label>
+        <label class="block">
+          <span class="text-sm font-medium text-neutral-700">Max photos on wall</span>
+          <input
+            v-model.number="maxPhotosDraft"
+            type="number"
+            min="10"
+            max="1000"
+            step="10"
+            class="mt-1 w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none"
+          />
+          <span class="mt-1 block text-xs text-neutral-400">Oldest photos are evicted (FIFO). Default: 100.</span>
         </label>
         <div class="flex items-center gap-2">
           <button

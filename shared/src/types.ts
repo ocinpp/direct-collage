@@ -100,6 +100,8 @@ export interface WallPublicDTO {
   headerLogo: string | null;
   /** Auto-scroll speed in px/sec (null = default). */
   scrollSpeed: number | null;
+  /** Max photos retained on the wall (FIFO eviction; null = default 100). */
+  maxPhotos: number | null;
   /** How approved composites are displayed on the media wall. */
   displayMode: DisplayMode;
 }
