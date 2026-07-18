@@ -33,15 +33,18 @@ watch(wallSlug, (slug) => load(slug), { immediate: false });
 onMounted(() => load(wallSlug.value));
 onUnmounted(() => disconnect());
 
-const bgStyle = computed(() => ({
-  backgroundColor: wall.value?.bgColor ?? "#000000",
-}));
 const displayTitle = computed(() => wall.value?.title || wall.value?.name || "");
 const scrollSpeed = computed(() => wall.value?.scrollSpeed ?? 30);
+
+/** Background + text color from wall config. */
+const rootStyle = computed(() => ({
+  backgroundColor: wall.value?.bgColor ?? "#000000",
+  color: wall.value?.textColor ?? "#ffffff",
+}));
 </script>
 
 <template>
-  <div class="flex h-dvh flex-col text-white" :style="bgStyle">
+  <div class="flex h-dvh flex-col" :style="rootStyle">
     <!-- Header: logo + title (fixed, doesn't scroll) -->
     <header class="flex shrink-0 items-center justify-center gap-4 px-6 py-3">
       <img

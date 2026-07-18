@@ -52,6 +52,7 @@ const editingBranding = ref(false);
 const savingBranding = ref(false);
 const brandingError = ref<string | null>(null);
 const bgColorDraft = ref("#000000");
+const textColorDraft = ref("#ffffff");
 const headerLogoDraft = ref("");
 const scrollSpeedDraft = ref(30);
 const displayModeDraft = ref<DisplayMode>("scrolling-grid");
@@ -71,6 +72,7 @@ async function loadAnalytics(wallId: string) {
 
 function startEditBranding() {
   bgColorDraft.value = wall.value?.bgColor ?? "#000000";
+  textColorDraft.value = wall.value?.textColor ?? "#ffffff";
   headerLogoDraft.value = wall.value?.headerLogo ?? "";
   scrollSpeedDraft.value = wall.value?.scrollSpeed ?? 30;
   displayModeDraft.value = wall.value?.displayMode ?? "scrolling-grid";
@@ -86,6 +88,7 @@ async function saveBranding() {
   try {
     const updated = await api.walls.patch(wall.value.id, {
       bgColor: bgColorDraft.value || null,
+      textColor: textColorDraft.value || null,
       headerLogo: headerLogoDraft.value.trim() || null,
       scrollSpeed: scrollSpeedDraft.value,
       displayMode: displayModeDraft.value,
@@ -242,6 +245,13 @@ async function onLogout() {
           />
           {{ wall.bgColor ?? "default (black)" }}
         </span>
+        <span class="flex items-center gap-1.5">
+          <span
+            class="inline-block h-4 w-4 rounded border border-neutral-300"
+            :style="{ backgroundColor: wall.textColor ?? '#ffffff' }"
+          />
+          Text: {{ wall.textColor ?? "default (white)" }}
+        </span>
         <span v-if="wall.headerLogo" class="truncate">Logo: {{ wall.headerLogo }}</span>
         <span v-else>No logo</span>
         <span>Speed: {{ wall.scrollSpeed ?? 30 }}px/s</span>
@@ -254,6 +264,14 @@ async function onLogout() {
           <span class="text-sm font-medium text-neutral-700">Background color</span>
           <input
             v-model="bgColorDraft"
+            type="color"
+            class="h-8 w-12 cursor-pointer rounded border border-neutral-300"
+          />
+        </label>
+        <label class="flex items-center justify-between gap-3">
+          <span class="text-sm font-medium text-neutral-700">Text color</span>
+          <input
+            v-model="textColorDraft"
             type="color"
             class="h-8 w-12 cursor-pointer rounded border border-neutral-300"
           />

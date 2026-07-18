@@ -20,6 +20,7 @@ export function toWallDTO(w: PrismaWall): WallPublicDTO {
     status: w.status as WallPublicDTO["status"],
     aspectRatio: w.aspectRatio as AspectRatio,
     bgColor: w.bgColor,
+    textColor: w.textColor,
     headerLogo: w.headerLogo,
     scrollSpeed: w.scrollSpeed,
     maxPhotos: w.maxPhotos,

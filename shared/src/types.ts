@@ -41,12 +41,14 @@ export type CompositeStatus = "PENDING" | "APPROVED" | "REJECTED";
  *   triad-topbig      — 3 images: 1 large top + 2 below (default)
  *   triad-row         — 3 images: 1 large left + 2 side-by-side right
  *   triad-columns     — 3 images: 3 identical columns
+ *   duo               — 2 images: 2 identical columns side-by-side
  *   quad              — 4 images: 2x2 uniform
  *   pentagon-topbig   — 5 images: 1 large top + 2x2 below (default)
  *   pentagon-row      — 5 images: 1 large left + 4 side-by-side right
  */
 export type TemplateVariant =
   | "solo"
+  | "duo"
   | "triad-topbig"
   | "triad-row"
   | "triad-columns"
@@ -74,7 +76,7 @@ export interface TemplateDef {
   /** Human-readable label, e.g. "Triad — Top-Big". */
   label: string;
   /** Template family for grouping in the picker. */
-  family: "Solo" | "Triad" | "Quad" | "Pentagon";
+  family: "Solo" | "Duo" | "Triad" | "Quad" | "Pentagon";
   /** Number of photo slots. */
   slots: number;
   /** Is this the default variant for its family? */
@@ -97,6 +99,7 @@ export interface WallPublicDTO {
   status: WallStatus;
   aspectRatio: AspectRatio;
   bgColor: string | null;
+  textColor: string | null;
   headerLogo: string | null;
   /** Auto-scroll speed in px/sec (null = default). */
   scrollSpeed: number | null;

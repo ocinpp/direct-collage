@@ -54,7 +54,7 @@ export const api = {
       body: Partial<
         Pick<
           WallPublicDTO,
-          "title" | "name" | "bgColor" | "headerLogo" | "scrollSpeed" | "maxPhotos" | "displayMode"
+          "title" | "name" | "bgColor" | "textColor" | "headerLogo" | "scrollSpeed" | "maxPhotos" | "displayMode"
         >
       >,
     ) {

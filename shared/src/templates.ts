@@ -73,6 +73,19 @@ export const TEMPLATES: Record<TemplateVariant, TemplateDef> = {
     ],
   },
 
+  // --- Duo: 2 identical columns side-by-side ---
+  "duo": {
+    variant: "duo",
+    label: "Duo",
+    family: "Duo",
+    slots: 2,
+    default: true,
+    rect: [
+      slot(0, 0, 0, 0.5, 1),
+      slot(1, 0.5, 0, 0.5, 1),
+    ],
+  },
+
   // --- Quad: 2x2 uniform grid ---
   quad: {
     variant: "quad",
@@ -127,6 +140,7 @@ export const TEMPLATES: Record<TemplateVariant, TemplateDef> = {
 /** All variants, in display order. */
 export const ALL_TEMPLATES: TemplateDef[] = [
   TEMPLATES.solo,
+  TEMPLATES.duo,
   TEMPLATES["triad-topbig"],
   TEMPLATES["triad-row"],
   TEMPLATES["triad-columns"],
@@ -151,6 +165,7 @@ export function getTemplate(variant: TemplateVariant): TemplateDef {
  */
 export const ENABLED_TEMPLATES: TemplateVariant[] = [
   "solo",
+  "duo",
   "triad-topbig",
   "triad-row",
   "triad-columns",
