@@ -7,6 +7,7 @@ import type {
   AspectRatio,
   DisplayMode,
   FontFamily,
+  GridStyle,
   TemplateVariant,
 } from "@direct-collage/shared";
 import { storage } from "./storage-instance.js";
@@ -27,6 +28,7 @@ export function toWallDTO(w: PrismaWall): WallPublicDTO {
     maxPhotos: w.maxPhotos,
     displayMode: w.displayMode as DisplayMode,
     fontFamily: w.fontFamily as FontFamily,
+    gridStyle: w.gridStyle as GridStyle,
   };
 }
 

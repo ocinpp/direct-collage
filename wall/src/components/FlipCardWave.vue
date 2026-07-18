@@ -6,6 +6,7 @@ const props = defineProps<{
   composites: CompositePublicDTO[];
   ratio: AspectRatio;
   scrollSpeed: number;
+  gridStyle?: string;
 }>();
 
 /**
@@ -283,7 +284,11 @@ const cellAspect = computed(() => {
 <template>
   <div ref="containerRef" class="h-full overflow-hidden p-3">
     <div
-      class="grid h-full w-full gap-3"
+      class="grid h-full w-full"
+      :class="[
+        gridStyle === 'gallery-frame' ? 'gap-0 grid-gallery-frame' : 'gap-3',
+        gridStyle === 'mounted-print' ? 'grid-mounted-print' : '',
+      ]"
       :style="{
         gridTemplateColumns: `repeat(${numCols}, 1fr)`,
         gridTemplateRows: `repeat(${numRows}, 1fr)`,

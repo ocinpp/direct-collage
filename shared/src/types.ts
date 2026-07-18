@@ -46,6 +46,17 @@ export const DISPLAY_MODE_LABELS: Record<DisplayMode, string> = {
   "flip-card-wave": "Flip Card Wave",
 };
 
+/** Admin-selectable grid line style for grid-based wall modes. */
+export type GridStyle = "none" | "gallery-frame" | "mounted-print" | "decorative";
+
+/** Human-readable labels for each grid style (for admin selectors). */
+export const GRID_STYLE_LABELS: Record<GridStyle, string> = {
+  none: "None",
+  "gallery-frame": "Gallery Frame Lines",
+  "mounted-print": "Mounted Print Frame",
+  decorative: "Decorative Background",
+};
+
 /** Composite moderation status. */
 export type CompositeStatus = "PENDING" | "APPROVED" | "REJECTED";
 
@@ -124,6 +135,8 @@ export interface WallPublicDTO {
   maxPhotos: number | null;
   /** Display font for the wall title (loaded via Google Fonts). */
   fontFamily: FontFamily;
+  /** Grid line style for grid-based wall modes (none | gallery-frame | mounted-print | decorative). */
+  gridStyle: GridStyle;
   /** How approved composites are displayed on the media wall. */
   displayMode: DisplayMode;
 }

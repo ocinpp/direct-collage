@@ -76,3 +76,34 @@ body {
 .cell-enter-active > * {
   animation: dc-highlight-pulse 1.5s ease-out 0.3s both;
 }
+
+/* ── Grid line styles (admin-selectable) ────────────────────── */
+
+/* Gallery Frame: thin colored lines between cells, like a museum hanging
+   system. Uses currentColor (inherited from the wall's textColor) at 20%
+   opacity. Applied to each photo cell. */
+.grid-gallery-frame > * {
+  border: 1px solid color-mix(in srgb, currentColor 20%, transparent);
+  border-radius: 0;
+}
+
+/* Mounted Print: outer picture frame around the entire grid + wider gaps.
+   The whole grid reads as one curated piece. */
+.grid-mounted-print {
+  padding: 8px;
+  border: 2px solid color-mix(in srgb, currentColor 15%, transparent);
+  border-radius: 12px;
+  gap: 12px;
+}
+
+/* Decorative: subtle diagonal stripe pattern on the background behind photos.
+   Barely visible (3% opacity) — adds energy without distraction. */
+.wall-decorative-bg {
+  background-image: repeating-linear-gradient(
+    45deg,
+    transparent,
+    transparent 40px,
+    rgba(255, 255, 255, 0.03) 40px,
+    rgba(255, 255, 255, 0.03) 80px
+  );
+}

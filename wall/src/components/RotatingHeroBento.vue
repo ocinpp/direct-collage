@@ -6,6 +6,7 @@ const props = defineProps<{
   composites: CompositePublicDTO[];
   ratio: AspectRatio;
   scrollSpeed: number;
+  gridStyle?: string;
 }>();
 
 /**
@@ -163,7 +164,11 @@ const cellAspect = computed(() => {
     <div
       v-if="featured"
       class="relative h-full shrink-0 overflow-hidden rounded-lg bg-neutral-900 shadow-lg"
-      :style="{ aspectRatio: cellAspect, height: '100%' }"
+      :style="{
+        aspectRatio: cellAspect,
+        height: '100%',
+        ...(gridStyle === 'gallery-frame' ? { border: '1px solid color-mix(in srgb, currentColor 20%, transparent)' } : {}),
+      }"
     >
       <!--
         out-in: old photo fully fades out before new one fades in. Prevents
@@ -183,7 +188,11 @@ const cellAspect = computed(() => {
     <!-- Right: small photos in a fixed 4-column grid. No TransitionGroup —
          it caused jank when multiple items shifted positions simultaneously
          during the featured/shown/queue rotation. A plain re-render is smoother. -->
-    <div class="grid flex-1 gap-1.5 overflow-hidden"
+    <div class="grid flex-1 overflow-hidden"
+      :class="[
+        gridStyle === 'gallery-frame' ? 'gap-0 grid-gallery-frame' : 'gap-1.5',
+        gridStyle === 'mounted-print' ? 'grid-mounted-print' : '',
+      ]"
       style="grid-template-columns: repeat(4, 1fr); grid-auto-rows: min-content"
     >
       <div

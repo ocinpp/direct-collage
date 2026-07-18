@@ -11,6 +11,8 @@ const props = defineProps<{
   scrollSpeed: number;
   /** ID of the newest composite — gets a persistent accent ring. */
   newestId?: string | null;
+  /** Grid line style from wall config. */
+  gridStyle?: string;
 }>();
 
 // --- DOM refs for the auto-scroll engine ---
@@ -113,7 +115,11 @@ const renderList = computed(() => {
       <TransitionGroup
         name="cell"
         tag="div"
-        class="grid grid-cols-1 gap-2 sm:grid-cols-3 lg:grid-cols-5"
+        class="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-5"
+        :class="[
+          gridStyle === 'gallery-frame' ? 'gap-0 grid-gallery-frame' : 'gap-2',
+          gridStyle === 'mounted-print' ? 'grid-mounted-print' : '',
+        ]"
         style="grid-auto-flow: dense"
         aria-live="polite"
       >

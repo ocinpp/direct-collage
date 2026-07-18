@@ -41,6 +41,9 @@ const patchSchema = z.object({
   fontFamily: z
     .enum(["system", "archivo-black", "anton", "space-grotesk", "bebas-neue"])
     .optional(),
+  gridStyle: z
+    .enum(["none", "gallery-frame", "mounted-print", "decorative"])
+    .optional(),
 });
 
 adminWallsRouter.get(
@@ -96,6 +99,7 @@ adminWallsRouter.patch(
         ...(body.maxPhotos !== undefined && { maxPhotos: body.maxPhotos }),
         ...(body.displayMode !== undefined && { displayMode: body.displayMode }),
         ...(body.fontFamily !== undefined && { fontFamily: body.fontFamily }),
+        ...(body.gridStyle !== undefined && { gridStyle: body.gridStyle }),
       },
     });
     res.json(toWallDTO(wall));

@@ -81,6 +81,9 @@ onUnmounted(() => {
 
 /** Pass the newest composite ID to scrolling modes for accent ring. */
 const newestId = computed(() => composites.value[0]?.id ?? null);
+
+/** Grid style from wall config — applied to grid-based modes. */
+const gridStyle = computed(() => wall.value?.gridStyle ?? "none");
 </script>
 
 <template>
@@ -152,14 +155,20 @@ const newestId = computed(() => composites.value[0]?.id ?? null);
     </div>
 
     <!-- Content: dispatched to the mode-specific component -->
-    <component
-      v-else-if="wall"
-      :is="modeComponent"
-      :composites="composites"
-      :ratio="wall.aspectRatio"
-      :scroll-speed="scrollSpeed"
-      :newest-id="newestId"
+    <div
+      v-if="wall && !loading && !error && composites.length > 0"
       class="relative z-1 flex-1 overflow-hidden"
-    />
+      :class="gridStyle === 'decorative' ? 'wall-decorative-bg' : ''"
+    >
+      <component
+        :is="modeComponent"
+        :composites="composites"
+        :ratio="wall.aspectRatio"
+        :scroll-speed="scrollSpeed"
+        :newest-id="newestId"
+        :grid-style="gridStyle"
+        class="h-full"
+      />
+    </div>
   </div>
 </template>
