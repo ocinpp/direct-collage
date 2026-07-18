@@ -35,7 +35,12 @@ const featured = ref<CompositePublicDTO | null>(null);
 const queue = ref<CompositePublicDTO[]>([]);
 const shown = ref<CompositePublicDTO[]>([]);
 
-const CYCLE_MS = 4000;
+/** Derive rotation time from speed: 0 = 8s (slow), 100 = 2s (fast). Default ~30 → 4s. */
+const cycleMs = computed(() => {
+  const s = props.scrollSpeed;
+  return Math.round(8000 - (s / 100) * 6000);
+});
+
 let cycleTimer: ReturnType<typeof setInterval> | null = null;
 
 /** A map of all composites by id, for resolving references after reconnects. */
@@ -79,8 +84,11 @@ function advance() {
 
 function restartCycle() {
   if (cycleTimer) clearInterval(cycleTimer);
-  cycleTimer = setInterval(advance, CYCLE_MS);
+  cycleTimer = setInterval(advance, cycleMs.value);
 }
+
+// Restart cycle when speed changes.
+watch(cycleMs, restartCycle);
 
 onMounted(() => {
   init();

@@ -17,7 +17,11 @@ const props = defineProps<{
  * A ResizeObserver re-computes on viewport changes.
  */
 
-const WAVE_MS = 8000;
+/** Derive wave interval from speed: 0 = 16s (slow), 100 = 3s (fast). Default ~30 → 8s. */
+const waveMs = computed(() => {
+  const s = props.scrollSpeed;
+  return Math.round(16000 - (s / 100) * 13000);
+});
 const FLIP_STAGGER_MS = 120;
 const GAP_PX = 12;
 const MIN_CARD_PX = 80; // don't make cards smaller than this
@@ -194,8 +198,11 @@ let cycleTimer: ReturnType<typeof setInterval> | null = null;
 
 function restartCycle() {
   if (cycleTimer) clearInterval(cycleTimer);
-  cycleTimer = setInterval(triggerWave, WAVE_MS);
+  cycleTimer = setInterval(triggerWave, waveMs.value);
 }
+
+// Restart cycle when speed changes.
+watch(waveMs, restartCycle);
 
 onMounted(() => {
   recomputeGrid();

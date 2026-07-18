@@ -27,7 +27,7 @@ const patchSchema = z.object({
   bgColor: z.string().nullable().optional(),
   textColor: z.string().nullable().optional(),
   headerLogo: z.string().nullable().optional(),
-  scrollSpeed: z.number().int().min(0).max(300).nullable().optional(),
+  scrollSpeed: z.number().int().min(0).max(100).nullable().optional(),
   maxPhotos: z.number().int().min(10).max(1000).nullable().optional(),
   displayMode: z
     .enum([

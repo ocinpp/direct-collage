@@ -254,7 +254,7 @@ async function onLogout() {
         </span>
         <span v-if="wall.headerLogo" class="truncate">Logo: {{ wall.headerLogo }}</span>
         <span v-else>No logo</span>
-        <span>Speed: {{ wall.scrollSpeed ?? 30 }}px/s</span>
+        <span>Speed: {{ wall.scrollSpeed ?? 30 }}</span>
         <span>Max: {{ wall.maxPhotos ?? 100 }} photos</span>
         <span>Mode: {{ wall.displayMode ? DISPLAY_MODE_LABELS[wall.displayMode] : "Scrolling Grid" }}</span>
       </div>
@@ -287,19 +287,19 @@ async function onLogout() {
         </label>
         <label class="block">
           <span class="text-sm font-medium text-neutral-700">
-            Scroll speed: {{ scrollSpeedDraft }}px/s
+            Transition speed: {{ scrollSpeedDraft }}
           </span>
           <input
             v-model.number="scrollSpeedDraft"
             type="range"
             min="0"
-            max="120"
+            max="100"
             step="5"
             class="mt-2 h-2 w-full accent-brand-500"
           />
           <div class="flex justify-between text-xs text-neutral-400">
-            <span>Paused (0)</span>
-            <span>Fast (120)</span>
+            <span>Slow (0)</span>
+            <span>Fast (100)</span>
           </div>
         </label>
         <label class="block">

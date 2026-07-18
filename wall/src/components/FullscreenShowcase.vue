@@ -9,8 +9,13 @@ const props = defineProps<{
 }>();
 
 const activeIndex = ref(0);
-const DISPLAY_MS = 6000;
 let cycleTimer: ReturnType<typeof setInterval> | null = null;
+
+/** Derive display time from speed: 0 = 12s (slow), 100 = 2s (fast). Default ~30 → 6s. */
+const displayMs = computed(() => {
+  const s = props.scrollSpeed;
+  return Math.round(12000 - (s / 100) * 10000);
+});
 
 const activeComposite = computed(() => props.composites[activeIndex.value]);
 const upcoming = computed(() =>
@@ -32,8 +37,11 @@ function jumpTo(index: number) {
 
 function restartCycle() {
   if (cycleTimer) clearInterval(cycleTimer);
-  cycleTimer = setInterval(next, DISPLAY_MS);
+  cycleTimer = setInterval(next, displayMs.value);
 }
+
+// Restart cycle when speed changes.
+watch(displayMs, restartCycle);
 
 onMounted(restartCycle);
 onUnmounted(() => {
