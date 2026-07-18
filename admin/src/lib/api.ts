@@ -66,8 +66,9 @@ export const api = {
   },
 
   queue: {
-    list(wallId: string) {
-      return request<CompositeQueueDTO[]>(`/api/admin/queue/${wallId}`);
+    list(wallId: string, status?: string) {
+      const qs = status ? `?status=${encodeURIComponent(status)}` : "";
+      return request<CompositeQueueDTO[]>(`/api/admin/queue/${wallId}${qs}`);
     },
     approve(id: string) {
       return request<CompositeQueueDTO>(`/api/admin/composites/${id}/approve`, {

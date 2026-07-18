@@ -119,7 +119,7 @@ onMounted(async () => {
       return;
     }
     wall.value = found;
-    await queueStore.load(found.id);
+    await queueStore.load(found.id, "PENDING");
     pollTimer = setInterval(() => queueStore.load(found.id), 5000);
     await loadAnalytics(found.id);
     analyticsTimer = setInterval(() => loadAnalytics(found.id), 10000);
@@ -134,6 +134,13 @@ function stopPolling() {
   if (analyticsTimer) clearInterval(analyticsTimer);
   analyticsTimer = null;
 }
+
+/** Switch status tab and reload. */
+async function switchTab(status: string) {
+  if (!wall.value) return;
+  await queueStore.load(wall.value.id, status);
+}
+
 // Cleanup on unmount.
 onUnmounted(stopPolling);
 
@@ -372,9 +379,38 @@ async function onLogout() {
     </p>
     <p v-if="error" class="rounded bg-rose-100 px-3 py-2 text-rose-700">{{ error }}</p>
 
+    <!-- Status tabs -->
+    <div class="mb-4 flex gap-1 border-b-2 border-neutral-200">
+      <button
+        v-for="tab in [
+          { key: 'PENDING', label: 'Pending', count: analytics?.pending },
+          { key: 'APPROVED', label: 'Approved', count: analytics?.approved },
+          { key: 'REJECTED', label: 'Rejected', count: analytics?.rejected },
+        ]"
+        :key="tab.key"
+        type="button"
+        class="flex items-center gap-1.5 px-4 py-2 text-sm font-medium transition-colors"
+        :class="queueStore.activeStatus === tab.key
+          ? 'border-b-2 border-brand-600 text-brand-600'
+          : 'text-neutral-500 hover:text-neutral-700'"
+        :style="queueStore.activeStatus === tab.key ? { marginBottom: '-2px' } : ''"
+        @click="switchTab(tab.key)"
+      >
+        {{ tab.label }}
+        <span
+          class="rounded-full px-1.5 py-0.5 text-xs"
+          :class="queueStore.activeStatus === tab.key
+            ? 'bg-brand-100 text-brand-700'
+            : 'bg-neutral-100 text-neutral-500'"
+        >
+          {{ tab.count ?? 0 }}
+        </span>
+      </button>
+    </div>
+
     <!-- Loading -->
     <div v-if="loading && items.length === 0" class="py-16 text-center text-neutral-400">
-      Loading queue…
+      Loading…
     </div>
 
     <!-- Empty -->
@@ -382,7 +418,9 @@ async function onLogout() {
       v-else-if="items.length === 0"
       class="rounded-xl border border-dashed border-neutral-300 py-16 text-center text-neutral-400"
     >
-      No pending composites. New submissions will appear here.
+      <span v-if="queueStore.activeStatus === 'PENDING'">No pending composites. New submissions will appear here.</span>
+      <span v-else-if="queueStore.activeStatus === 'APPROVED'">No approved photos yet.</span>
+      <span v-else>No rejected photos.</span>
     </div>
 
     <!-- Queue grid -->
