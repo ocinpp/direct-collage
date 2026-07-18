@@ -2,6 +2,7 @@ import type {
   WallPublicDTO,
   CompositeQueueDTO,
   WallAnalyticsDTO,
+  PaginatedQueueDTO,
 } from "@direct-collage/shared";
 
 const BASE = import.meta.env.VITE_API_URL ?? "";
@@ -66,9 +67,12 @@ export const api = {
   },
 
   queue: {
-    list(wallId: string, status?: string) {
-      const qs = status ? `?status=${encodeURIComponent(status)}` : "";
-      return request<CompositeQueueDTO[]>(`/api/admin/queue/${wallId}${qs}`);
+    list(wallId: string, status?: string, before?: string) {
+      const params = new URLSearchParams();
+      if (status) params.set("status", status);
+      if (before) params.set("before", before);
+      const qs = params.toString() ? `?${params}` : "";
+      return request<PaginatedQueueDTO>(`/api/admin/queue/${wallId}${qs}`);
     },
     approve(id: string) {
       return request<CompositeQueueDTO>(`/api/admin/composites/${id}/approve`, {

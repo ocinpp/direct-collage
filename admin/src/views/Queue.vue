@@ -120,7 +120,7 @@ onMounted(async () => {
     }
     wall.value = found;
     await queueStore.load(found.id, "PENDING");
-    pollTimer = setInterval(() => queueStore.load(found.id), 5000);
+    pollTimer = setInterval(() => queueStore.refresh(), 5000);
     await loadAnalytics(found.id);
     analyticsTimer = setInterval(() => loadAnalytics(found.id), 10000);
   } catch (e) {
@@ -436,6 +436,18 @@ async function onLogout() {
         @approve="queueStore.approve(c.id)"
         @reject="queueStore.reject(c.id)"
       />
+    </div>
+
+    <!-- Load more -->
+    <div v-if="queueStore.hasMore && items.length > 0" class="mt-4 flex justify-center">
+      <button
+        type="button"
+        :disabled="queueStore.loadingMore"
+        class="rounded-lg border border-neutral-300 bg-white px-6 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-50 disabled:opacity-50"
+        @click="queueStore.loadMore()"
+      >
+        {{ queueStore.loadingMore ? "Loading…" : "Load more" }}
+      </button>
     </div>
   </div>
 </template>

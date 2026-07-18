@@ -138,6 +138,13 @@ export interface WallAnalyticsDTO {
   pending: number;
 }
 
+/** Paginated queue response (cursor-based). */
+export interface PaginatedQueueDTO {
+  items: CompositeQueueDTO[];
+  /** ISO timestamp of the last item's sort field, or null if no more pages. */
+  nextCursor: string | null;
+}
+
 /** Payload shape for the submit request (multipart on the wire). */
 export interface SubmitPayload {
   wallSlug: string;
