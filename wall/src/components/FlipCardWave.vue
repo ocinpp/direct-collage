@@ -86,18 +86,85 @@ function rebuildCards() {
   }
 }
 
+/**
+ * SHUFFLED ROTATION with spread + dedup.
+ *
+ * The rotation is a Fisher-Yates shuffled copy of the composites, with a
+ * "spread pass" that separates adjacent photos sharing the same template
+ * variant (a proxy for "might look similar"). A cursor walks linearly so
+ * each photo appears exactly once per full cycle. nextPhoto() skips any
+ * photo currently visible on a card face (dedup).
+ *
+ * New photos (SSE) are inserted a few positions ahead of the cursor so they
+ * appear in the next 1-2 waves — graceful, not immediate.
+ */
+
 let rotation: CompositePublicDTO[] = [];
 let nextPhotoIdx = 0;
 
+/** Fisher-Yates shuffle (in-place). */
+function shuffle(arr: CompositePublicDTO[]): CompositePublicDTO[] {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j]!, a[i]!];
+  }
+  return a;
+}
+
+/**
+ * Spread pass: walk the array and if two adjacent items share the same
+ * templateVariant, swap the second one forward by a few positions. Reduces
+ * visual clustering of similar-looking composites.
+ */
+function spread(arr: CompositePublicDTO[]): CompositePublicDTO[] {
+  const a = [...arr];
+  for (let i = 1; i < a.length - 1; i++) {
+    if (a[i]!.templateVariant === a[i - 1]!.templateVariant) {
+      // Find the next item with a different variant, swap it in.
+      for (let j = i + 1; j < a.length; j++) {
+        if (a[j]!.templateVariant !== a[i - 1]!.templateVariant) {
+          [a[i], a[j]] = [a[j]!, a[i]!];
+          break;
+        }
+      }
+    }
+  }
+  return a;
+}
+
+/**
+ * Get the next photo from the rotation that is NOT currently visible on any
+ * card face. Prevents duplicates — the same photo won't appear on two cards
+ * simultaneously, even when the cursor wraps.
+ */
 function nextPhoto(): CompositePublicDTO | null {
   if (rotation.length === 0) return null;
+
+  const visibleIds = new Set<string>();
+  for (const card of cards.value) {
+    if (card.faceA) visibleIds.add(card.faceA.id);
+    if (card.faceB) visibleIds.add(card.faceB.id);
+  }
+
+  for (let step = 0; step < rotation.length; step++) {
+    const idx = (nextPhotoIdx + step) % rotation.length;
+    const photo = rotation[idx];
+    if (photo && !visibleIds.has(photo.id)) {
+      nextPhotoIdx = idx + 1;
+      return photo;
+    }
+  }
+
+  // Fallback (all visible — shouldn't happen with dedup + enough photos).
   const photo = rotation[nextPhotoIdx % rotation.length];
   nextPhotoIdx++;
   return photo ?? null;
 }
 
+/** Initialize: shuffle + spread the composites, then fill cards. */
 function initCards() {
-  rotation = [...props.composites];
+  rotation = spread(shuffle(props.composites));
   nextPhotoIdx = 0;
   cards.value = Array.from({ length: numCards.value }, () => ({
     faceA: null,
@@ -149,13 +216,23 @@ onUnmounted(() => {
   resizeObserver?.disconnect();
 });
 
+/**
+ * New photo arrives via SSE. Insert it a few positions ahead of the current
+ * cursor so it appears in the next 1-2 waves — not immediately (which would
+ * interrupt the current display) and not after a full cycle (too long).
+ */
 watch(
   () => props.composites[0]?.id,
   (newId, oldId) => {
     if (!newId || newId === oldId) return;
     const newPhoto = props.composites.find((c) => c.id === newId);
     if (!newPhoto) return;
-    rotation = [newPhoto, ...rotation.filter((c) => c.id !== newId)];
+    // Remove if already in rotation (safety dedup).
+    rotation = rotation.filter((c) => c.id !== newId);
+    // Insert ~numCards positions ahead of the cursor — it'll be picked in
+    // the next wave or two as the cursor advances.
+    const insertPos = (nextPhotoIdx + numCards.value) % Math.max(rotation.length + 1, 1);
+    rotation = [...rotation.slice(0, insertPos), newPhoto, ...rotation.slice(insertPos)];
   },
 );
 
