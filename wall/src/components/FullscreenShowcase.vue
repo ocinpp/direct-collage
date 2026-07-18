@@ -82,19 +82,20 @@ const cellAspect = computed(() => {
           <img
             :src="activeComposite.url"
             :alt="`Collage ${activeComposite.id}`"
-            class="h-full w-full rounded-lg object-cover shadow-2xl"
+            class="h-full w-full rounded-lg object-cover shadow-lg"
           />
         </div>
       </Transition>
     </div>
 
-    <!-- Thumbnail strip -->
+    <!-- Thumbnail strip — the next upcoming thumbnail is highlighted -->
     <div class="flex shrink-0 justify-center gap-2 overflow-hidden px-4 pb-4 pt-2">
       <button
         v-for="(thumb, i) in upcoming"
         :key="thumb.id"
         type="button"
-        class="h-14 w-14 shrink-0 overflow-hidden rounded-md border-2 border-transparent opacity-50 transition-all hover:opacity-100"
+        class="h-14 w-14 shrink-0 overflow-hidden rounded-md border-2 opacity-50 transition-all hover:opacity-100"
+        :class="i === 0 ? 'border-white opacity-100' : 'border-transparent'"
         @click="jumpTo((activeIndex + 1 + i) % composites.length)"
       >
         <img :src="thumb.url" :alt="`Upcoming ${i}`" class="h-full w-full object-cover" />

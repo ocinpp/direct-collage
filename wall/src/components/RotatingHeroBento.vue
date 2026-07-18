@@ -162,7 +162,7 @@ const cellAspect = computed(() => {
     -->
     <div
       v-if="featured"
-      class="relative h-full shrink-0 overflow-hidden rounded-lg bg-neutral-900"
+      class="relative h-full shrink-0 overflow-hidden rounded-lg bg-neutral-900 shadow-lg"
       :style="{ aspectRatio: cellAspect, height: '100%' }"
     >
       <!--
@@ -189,7 +189,7 @@ const cellAspect = computed(() => {
       <div
         v-for="item in smallPhotos"
         :key="item.id"
-        class="relative w-full overflow-hidden rounded-md"
+        class="relative w-full overflow-hidden rounded-lg shadow-lg"
         :style="{ aspectRatio: cellAspect }"
       >
         <img

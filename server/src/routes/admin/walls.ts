@@ -38,6 +38,9 @@ const patchSchema = z.object({
       "flip-card-wave",
     ])
     .optional(),
+  fontFamily: z
+    .enum(["system", "archivo-black", "anton", "space-grotesk", "bebas-neue"])
+    .optional(),
 });
 
 adminWallsRouter.get(
@@ -92,6 +95,7 @@ adminWallsRouter.patch(
         ...(body.scrollSpeed !== undefined && { scrollSpeed: body.scrollSpeed }),
         ...(body.maxPhotos !== undefined && { maxPhotos: body.maxPhotos }),
         ...(body.displayMode !== undefined && { displayMode: body.displayMode }),
+        ...(body.fontFamily !== undefined && { fontFamily: body.fontFamily }),
       },
     });
     res.json(toWallDTO(wall));

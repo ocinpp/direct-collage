@@ -347,6 +347,7 @@ const cellAspect = computed(() => {
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
   background: #111;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
 }
 
 .flip-card-back {

@@ -9,6 +9,23 @@ export type AspectRatio = "1:1" | "4:5" | "9:16";
 /** Wall lifecycle status. */
 export type WallStatus = "ACTIVE" | "PAUSED";
 
+/** Admin-selectable display font for the wall title (loaded via Google Fonts). */
+export type FontFamily =
+  | "system"
+  | "archivo-black"
+  | "anton"
+  | "space-grotesk"
+  | "bebas-neue";
+
+/** Human-readable labels for each font option (for admin selectors). */
+export const FONT_FAMILY_LABELS: Record<FontFamily, string> = {
+  system: "System Default",
+  "archivo-black": "Archivo Black",
+  anton: "Anton",
+  "space-grotesk": "Space Grotesk",
+  "bebas-neue": "Bebas Neue",
+};
+
 /**
  * Wall display mode — how approved composites are rendered on the media wall.
  * Admin-configurable per wall (PRD §6.3.4 / display modes extension).
@@ -105,6 +122,8 @@ export interface WallPublicDTO {
   scrollSpeed: number | null;
   /** Max photos retained on the wall (FIFO eviction; null = default 100). */
   maxPhotos: number | null;
+  /** Display font for the wall title (loaded via Google Fonts). */
+  fontFamily: FontFamily;
   /** How approved composites are displayed on the media wall. */
   displayMode: DisplayMode;
 }

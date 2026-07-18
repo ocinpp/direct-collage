@@ -11,18 +11,42 @@ body {
   overscroll-behavior: none;
 }
 
-/* ── FLIP transition for new photos entering the grid ──────────
- * When a photo is prepended, Vue's TransitionGroup records old positions
- * and animates items to their new grid slots (the "move" class). The new
- * cell enters with a scale+fade; existing cells glide down.
- */
+/* ── Font families (loaded via Google Fonts in index.html) ──── */
+.font-archivo-black { font-family: "Archivo Black", sans-serif; }
+.font-anton { font-family: "Anton", sans-serif; }
+.font-space-grotesk { font-family: "Space Grotesk", sans-serif; }
+.font-bebas-neue { font-family: "Bebas Neue", sans-serif; }
 
-/* Existing cells glide to their new positions (the FLIP "move") */
+/* ── Background atmosphere ────────────────────────────────────
+ * A subtle radial gradient overlay: 4% white glow at center, 15% darkening
+ * at edges. Creates depth without being noticeable — you feel it, you don't
+ * see it. Works on any wall background color.
+ */
+.wall-atmosphere::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(255, 255, 255, 0.04) 0%,
+    rgba(0, 0, 0, 0.15) 100%
+  );
+}
+
+/* ── Newest photo ring (persistent accent) ────────────────────
+ * Applied to the newest composite's cell. A subtle white ring that stays
+ * until the next photo arrives — so viewers can always spot "what's new."
+ */
+.newest-photo {
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.25), 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+}
+
+/* ── FLIP transition for new photos entering the grid ────────── */
 .cell-move {
   transition: transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
-
-/* New cell enters: scale up from 0.8 + fade in */
 .cell-enter-active {
   transition:
     opacity 0.4s ease-out,
@@ -32,8 +56,6 @@ body {
   opacity: 0;
   transform: scale(0.8);
 }
-
-/* Removed cells fade out (shouldn't happen on the wall, but for completeness) */
 .cell-leave-active {
   transition: opacity 0.3s ease;
   position: absolute;
@@ -42,11 +64,7 @@ body {
   opacity: 0;
 }
 
-/* ── Entry highlight pulse on new cells ─────────────────────────
- * A brief brand-colored box-shadow ring that fades over ~1.5s, drawing the
- * eye to the newly-arrived photo. Applied via the cell-enter-active class
- * which Vue adds during the enter transition.
- */
+/* ── Entry highlight pulse on new cells ───────────────────────── */
 @keyframes dc-highlight-pulse {
   0% {
     box-shadow: 0 0 0 0 rgba(236, 72, 153, 0.8);

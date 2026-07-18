@@ -7,14 +7,10 @@ const props = defineProps<{
   spanClass: string;
   /** Wall aspect ratio — drives cell shape. All composites share this ratio. */
   ratio: AspectRatio;
+  /** True if this is the newest photo — applies a persistent accent ring. */
+  isNewest?: boolean;
 }>();
 
-/**
- * CSS aspect-ratio for the wall's configured ratio. Applied to ALL cells —
- * including the 2×2 hero — because the spans are chosen to preserve the
- * ratio: a 2×2 span of square cells is still square (2 col-widths wide,
- * 2 row-heights tall, where row-height = col-width via the aspect-ratio).
- */
 const cellAspect = (() => {
   switch (props.ratio) {
     case "1:1":
@@ -29,8 +25,8 @@ const cellAspect = (() => {
 
 <template>
   <div
-    class="relative overflow-hidden bg-neutral-900"
-    :class="spanClass"
+    class="relative overflow-hidden rounded-lg bg-neutral-900 shadow-lg"
+    :class="[spanClass, isNewest ? 'newest-photo' : '']"
     :style="{ aspectRatio: cellAspect }"
   >
     <img

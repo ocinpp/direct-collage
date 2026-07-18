@@ -5,8 +5,8 @@ import { storeToRefs } from "pinia";
 import { useAuthStore } from "../stores/auth.js";
 import { useQueueStore } from "../stores/queue.js";
 import { api } from "../lib/api.js";
-import type { DisplayMode, WallAnalyticsDTO, WallPublicDTO } from "@direct-collage/shared";
-import { DISPLAY_MODE_LABELS } from "@direct-collage/shared";
+import type { DisplayMode, FontFamily, WallAnalyticsDTO, WallPublicDTO } from "@direct-collage/shared";
+import { DISPLAY_MODE_LABELS, FONT_FAMILY_LABELS } from "@direct-collage/shared";
 import CompositeCard from "../components/CompositeCard.vue";
 
 const route = useRoute();
@@ -56,6 +56,7 @@ const textColorDraft = ref("#ffffff");
 const headerLogoDraft = ref("");
 const scrollSpeedDraft = ref(30);
 const displayModeDraft = ref<DisplayMode>("scrolling-grid");
+const fontFamilyDraft = ref<FontFamily>("system");
 const maxPhotosDraft = ref(100);
 
 // --- Analytics ---
@@ -76,6 +77,7 @@ function startEditBranding() {
   headerLogoDraft.value = wall.value?.headerLogo ?? "";
   scrollSpeedDraft.value = wall.value?.scrollSpeed ?? 30;
   displayModeDraft.value = wall.value?.displayMode ?? "scrolling-grid";
+  fontFamilyDraft.value = wall.value?.fontFamily ?? "system";
   maxPhotosDraft.value = wall.value?.maxPhotos ?? 100;
   editingBranding.value = true;
   brandingError.value = null;
@@ -92,6 +94,7 @@ async function saveBranding() {
       headerLogo: headerLogoDraft.value.trim() || null,
       scrollSpeed: scrollSpeedDraft.value,
       displayMode: displayModeDraft.value,
+      fontFamily: fontFamilyDraft.value,
       maxPhotos: maxPhotosDraft.value,
     });
     wall.value = updated;
@@ -264,6 +267,7 @@ async function onLogout() {
         <span>Speed: {{ wall.scrollSpeed ?? 30 }}</span>
         <span>Max: {{ wall.maxPhotos ?? 100 }} photos</span>
         <span>Mode: {{ wall.displayMode ? DISPLAY_MODE_LABELS[wall.displayMode] : "Scrolling Grid" }}</span>
+        <span>Font: {{ wall.fontFamily ? FONT_FAMILY_LABELS[wall.fontFamily as FontFamily] : "System Default" }}</span>
       </div>
 
       <div v-if="editingBranding" class="mt-3 space-y-3">
@@ -316,6 +320,17 @@ async function onLogout() {
             class="mt-1 w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none"
           >
             <option v-for="(label, key) in DISPLAY_MODE_LABELS" :key="key" :value="key">
+              {{ label }}
+            </option>
+          </select>
+        </label>
+        <label class="block">
+          <span class="text-sm font-medium text-neutral-700">Title font</span>
+          <select
+            v-model="fontFamilyDraft"
+            class="mt-1 w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none"
+          >
+            <option v-for="(label, key) in FONT_FAMILY_LABELS" :key="key" :value="key">
               {{ label }}
             </option>
           </select>

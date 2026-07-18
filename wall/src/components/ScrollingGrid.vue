@@ -9,6 +9,8 @@ const props = defineProps<{
   composites: CompositePublicDTO[];
   ratio: AspectRatio;
   scrollSpeed: number;
+  /** ID of the newest composite — gets a persistent accent ring. */
+  newestId?: string | null;
 }>();
 
 // --- DOM refs for the auto-scroll engine ---
@@ -121,6 +123,7 @@ const renderList = computed(() => {
           :composite="item.composite"
           :span-class="item.spanClass"
           :ratio="ratio"
+          :is-newest="item.composite.id === newestId"
           :style="item.colStart ? { gridColumnStart: item.colStart } : undefined"
         />
       </TransitionGroup>

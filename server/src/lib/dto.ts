@@ -6,6 +6,7 @@ import type {
   CompositeStatus,
   AspectRatio,
   DisplayMode,
+  FontFamily,
   TemplateVariant,
 } from "@direct-collage/shared";
 import { storage } from "./storage-instance.js";
@@ -25,6 +26,7 @@ export function toWallDTO(w: PrismaWall): WallPublicDTO {
     scrollSpeed: w.scrollSpeed,
     maxPhotos: w.maxPhotos,
     displayMode: w.displayMode as DisplayMode,
+    fontFamily: w.fontFamily as FontFamily,
   };
 }
 

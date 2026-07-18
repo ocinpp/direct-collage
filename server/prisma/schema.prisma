@@ -37,6 +37,8 @@ model Wall {
   maxPhotos Int?
   // How composites are displayed (scrolling-grid | fullscreen-showcase | rotating-hero-bento | scattered-polaroids | flip-card-wave)
   displayMode String @default("scrolling-grid")
+  // Display font for wall title (system | archivo-black | anton | space-grotesk | bebas-neue)
+  fontFamily String @default("system")
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
   composites  Composite[]
