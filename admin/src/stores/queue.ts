@@ -94,11 +94,21 @@ export const useQueueStore = defineStore("queue", () => {
     if (currentWallId) await load(currentWallId);
   }
 
+  /**
+   * Remove an item locally from the current list (optimistic update).
+   * Called after approve/reject — the item changed status so it no longer
+   * belongs in the active tab. Removes just that one item without reloading,
+   * so loaded pages (2+) stay intact and the user's scroll position is kept.
+   */
+  function removeLocal(id: string) {
+    items.value = items.value.filter((c) => c.id !== id);
+  }
+
   async function approve(id: string) {
     actingId.value = id;
     try {
       await api.queue.approve(id);
-      await reload();
+      removeLocal(id);
     } catch (e) {
       error.value = e instanceof Error ? e.message : "Approve failed";
     } finally {
@@ -110,7 +120,7 @@ export const useQueueStore = defineStore("queue", () => {
     actingId.value = id;
     try {
       await api.queue.reject(id);
-      await reload();
+      removeLocal(id);
     } catch (e) {
       error.value = e instanceof Error ? e.message : "Reject failed";
     } finally {
